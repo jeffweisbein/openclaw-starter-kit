@@ -64,6 +64,26 @@ agents/
     └── FINDINGS.md   — research reports
 ```
 
+### Shared Brain (`shared/` + `intel/`)
+
+Cross-agent knowledge and strategic context:
+
+```
+shared/                    — every agent reads at startup
+├── product-context.md     — what you're building, priorities, positioning
+├── voice-and-framing.md   — how to talk about your products
+├── decisions.md           — key decisions + WHY (prevents contradictions)
+└── user-signals.md        — what users are saying and doing
+
+intel/                     — strategic radar, curated from conversations
+├── competitors.md         — what competitors are doing
+├── trends.md              — industry trends and implications
+├── ideas-backlog.md       — feature ideas with supporting context
+└── opportunities.md       — time-sensitive market opportunities
+```
+
+**How it works:** When you share an article or insight with your main agent, it files it in `intel/` and cross-references with existing knowledge. When discussing future features, the agent pulls relevant intel automatically. All agents read `shared/` so they never contradict each other on positioning or decisions.
+
 ### Operations (`ops/`)
 
 Battle-tested governance:
