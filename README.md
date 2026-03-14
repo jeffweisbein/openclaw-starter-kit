@@ -45,7 +45,9 @@ openclaw gateway start
 | `MEMORY.md` | Long-term memory — curated by the AI over time |
 | `HEARTBEAT.md` | Periodic checks — what to monitor proactively |
 | `TOOLS.md` | Local tool notes — device names, SSH hosts, quirks |
-| `SQUAD.md` | Multi-agent setup guide — how to run a team of AI agents |
+| `SQUAD.md` | Multi-agent setup guide - how to run a team of AI agents |
+| `TOKEN-OPTIMIZATION.md` | How to stretch your AI subscription 3-5x further |
+| `MESH.md` | Multi-machine setup - delegate compute across machines |
 
 ### Multi-Agent Squad (`agents/`)
 
