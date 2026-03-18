@@ -150,14 +150,6 @@ Tweets, emails, deploys, deletes — always require human approval. Research, an
 
 Fill in USER.md. Name your AI. Tell it your preferences. The more it knows, the better it gets.
 
-## Want Someone to Set This Up For You?
-
-If you'd rather have experts handle the install, configuration, and ongoing management — check out **[OpenClaw Agency](https://hypelab.digital/oca)**.
-
-OCA is a managed retainer where we set up and run OpenClaw agents for your engineering team. Dedicated agents for your codebase, custom playbooks, CI/CD integration, monitoring, and weekly optimization. Plans start at $2k/mo.
-
-**[Learn more →](https://hypelab.digital/oca)**
-
 ---
 
 Built with [OpenClaw](https://openclaw.ai) • [Docs](https://docs.openclaw.ai) • [Community](https://discord.com/invite/clawd) • [More Skills](https://clawhub.com)
