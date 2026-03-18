@@ -32,6 +32,13 @@ mkdir -p ~/clawd/memory
 openclaw gateway start
 ```
 
+## Want Someone to Set This Up For You?
+
+**[OpenClaw Agency (OCA)](https://hypelab.digital/oca)** is a managed retainer where we install, configure, and run your agents for you. Custom playbooks, CI/CD integration, ongoing optimization. Plans start at $2k/mo.
+
+→ [Learn more at hypelab.digital/oca](https://hypelab.digital/oca)
+
+
 ## What's Inside
 
 ### Core Files
