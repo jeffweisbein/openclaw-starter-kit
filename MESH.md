@@ -89,11 +89,43 @@ This runs the AI inference on nova's hardware using nova's auth. The compute is 
 1. **Webhook hooks**: configure hooks to POST to peer gateway on events
 2. **Shared workspace via git**: both agents push/pull from same repos
 
+### OAuth Token Sync Between Machines
+
+If both machines use Claude Code with OAuth (flat-rate subscription), you need tokens synced. The tokens live at:
+
+```
+~/.claude/.credentials.json
+```
+
+Claude Code handles its own token refresh internally. Don't try to call the OAuth refresh endpoint directly (you'll get rate limited). Instead:
+
+1. Run `claude -p 'ok'` on the machine to force an internal token refresh
+2. Read the fresh tokens from `~/.claude/.credentials.json`
+3. Copy them to wherever your agent needs them (e.g. `auth-profiles.json`)
+
+Example sync script (run as a cron every 2 hours):
+```bash
+#!/bin/bash
+# sync-oauth-tokens.sh
+# force claude to refresh, then copy tokens to openclaw auth profile
+
+claude -p 'ok' 2>/dev/null  # triggers internal refresh
+CREDS="$HOME/.claude/.credentials.json"
+if [ -f "$CREDS" ]; then
+    # extract and write to your auth profile
+    cp "$CREDS" "$HOME/.openclaw/auth-profiles.json"
+    echo "[$(date)] tokens synced"
+fi
+```
+
+**Important**: if you run agents on separate Apple/Anthropic accounts (recommended), each machine has its own tokens. Don't copy tokens between machines — sync each machine independently.
+
 ### Setup Gotchas
 
 1. **Device pairing**: the remote machine must approve the calling machine's device pairing first
 2. **Trusted proxies**: add the calling machine to `trustedProxies` in the remote machine's config
 3. **Auth profiles**: remote machine's `auth-profiles.json` needs both access AND refresh token fields for auto-refresh to work
+4. **OAuth expiry**: tokens expire. set up the sync script above as a LaunchAgent or cron to avoid overnight token death
 
 ### Security
 - Gateway tokens are per-machine (never shared)

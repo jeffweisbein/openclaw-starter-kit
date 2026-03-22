@@ -102,7 +102,10 @@ Battle-tested governance:
 
 ### Scripts (`scripts/`)
 
+- **`auto-backup.sh`** — hourly git backup of your workspace. set it as a cron and never lose context again
+- **`health-check.sh`** — monitors agent processes + disk usage, alerts via iMessage if something goes down. supports local + remote machines
 - **`example-heartbeat-check.sh`** — template for efficient heartbeat checks (scripts are free, model time is expensive)
+- **`watchdog.sh`** — self-healing process monitor that restarts crashed agents
 
 ## How Memory Works
 
@@ -135,6 +138,56 @@ Agents react to each other via `reaction-matrix.json`:
 - Tweet posted → research agent analyzes engagement (50% chance, after 1 hour)
 - Bug detected → alert human immediately (100% chance, no delay)
 - High engagement → content agent drafts followup (70% chance)
+
+## Workspace Backup
+
+Your workspace is your agent's brain. Back it up.
+
+```bash
+# Make your workspace a git repo (if it isn't already)
+cd ~/clawd
+git init
+git remote add origin git@github.com:yourname/my-agent.git
+
+# Run the backup script once to test
+bash scripts/auto-backup.sh
+
+# Set up hourly auto-backup via openclaw cron:
+# name: "workspace-backup"
+# schedule: "0 * * * *"
+# payload: { kind: "agentTurn", message: "run bash ~/clawd/scripts/auto-backup.sh" }
+```
+
+Add a `.gitignore` for large/temp files:
+```
+node_modules/
+*.log
+.DS_Store
+.next/
+```
+
+## Health Monitoring
+
+If you're running agents 24/7, you need to know when they go down.
+
+```bash
+# Configure alerts (set your phone number)
+export ALERT_PHONE="+15551234567"
+
+# Optional: monitor a second machine
+export REMOTE_HOST="agent2@100.x.x.x"
+export REMOTE_NAME="forge"
+
+# Test it
+bash scripts/health-check.sh
+
+# Set up as a cron (every 10 minutes):
+# name: "health-check"
+# schedule: { kind: "every", everyMs: 600000 }
+# payload: { kind: "agentTurn", message: "run bash ~/clawd/scripts/health-check.sh" }
+```
+
+Status is written to `data/health.json` for dashboard use.
 
 ## Philosophy
 
