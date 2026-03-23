@@ -9,6 +9,8 @@
 #   ./oca-provision.sh                    # interactive install
 #   ./oca-provision.sh --dry-run          # show what would happen
 #   ./oca-provision.sh --check            # verify existing install
+#   ./oca-provision.sh --auth oauth        # use OAuth (skip auth prompt)
+#   ./oca-provision.sh --auth apikey       # use API keys (skip auth prompt)
 #
 # ═══════════════════════════════════════════════════════════════════
 
@@ -28,6 +30,8 @@ GATEWAY_PORT=18789
 MIN_NODE_VERSION=20
 DRY_RUN=false
 CHECK_ONLY=false
+AUTH_MODE=""          # oauth or apikey (empty = interactive prompt)
+OAUTH_PROVIDER=""     # anthropic or openai (for oauth mode)
 REPORT_FILE=""
 
 # ─── Colors ──────────────────────────────────────────────────────
@@ -64,9 +68,12 @@ while [[ $# -gt 0 ]]; do
     --agent)         OCA_AGENT_NAME="$2"; shift 2 ;;
     --tailscale-key) OCA_TAILSCALE_AUTHKEY="$2"; shift 2 ;;
     --monitor-url)   OCA_HYPELAB_MONITOR_URL="$2"; shift 2 ;;
+    --auth)          AUTH_MODE="$2"; shift 2 ;;
+    --provider)      OAUTH_PROVIDER="$2"; shift 2 ;;
     -h|--help)
       echo "Usage: $0 [--dry-run] [--check] [--workspace PATH] [--client NAME] [--agent NAME]"
       echo "       [--tailscale-key KEY] [--monitor-url URL]"
+      echo "       [--auth oauth|apikey] [--provider anthropic|openai]"
       exit 0 ;;
     *) echo "unknown arg: $1"; exit 1 ;;
   esac
@@ -145,15 +152,26 @@ if $CHECK_ONLY; then
     REPORT_STATUS="fail"
   fi
 
-  if [[ -f "${OPENCLAW_DIR}/.env" ]]; then
-    if grep -q "ANTHROPIC_API_KEY=" "${OPENCLAW_DIR}/.env" 2>/dev/null; then
-      pass "Anthropic API key configured"
-    else
-      warn "Anthropic API key not found in .env"
+  # Check auth — either OAuth or API keys
+  OAUTH_LOGGED_IN=false
+  if command -v openclaw &>/dev/null; then
+    if openclaw auth status 2>/dev/null | grep -qi "logged in\|authenticated"; then
+      pass "OAuth authentication active"
+      OAUTH_LOGGED_IN=true
     fi
-  else
-    fail "No .env file at ${OPENCLAW_DIR}/.env"
-    REPORT_STATUS="fail"
+  fi
+
+  if [[ "${OAUTH_LOGGED_IN}" != "true" ]]; then
+    if [[ -f "${OPENCLAW_DIR}/.env" ]]; then
+      if grep -q "ANTHROPIC_API_KEY=" "${OPENCLAW_DIR}/.env" 2>/dev/null; then
+        pass "Anthropic API key configured"
+      else
+        warn "Anthropic API key not found in .env"
+      fi
+    else
+      fail "No OAuth session and no .env file at ${OPENCLAW_DIR}/.env"
+      REPORT_STATUS="fail"
+    fi
   fi
 
   echo ""
@@ -227,77 +245,189 @@ pass "Starter kit deployed to ${WORKSPACE}"
 report_add "workspace" "\"${WORKSPACE}\""
 
 # ═════════════════════════════════════════════════════════════════
-# 5-6. API KEYS
+# 5. SELECT AUTHENTICATION METHOD
 # ═════════════════════════════════════════════════════════════════
-step "Configuring API keys"
+step "Configuring authentication"
 
 EXA_CONFIGURED=false
 
-if ! $DRY_RUN; then
-  mkdir -p "${OPENCLAW_DIR}"
-  ENV_FILE="${OPENCLAW_DIR}/.env"
-  [[ -f "${ENV_FILE}" ]] || touch "${ENV_FILE}"
-
-  # Anthropic (required)
-  if grep -q "ANTHROPIC_API_KEY=" "${ENV_FILE}" 2>/dev/null; then
-    info "Anthropic API key already set"
-  else
-    echo ""
-    echo -e "  ${BOLD}Anthropic API key (required)${RESET}"
-    echo "  Get one at: https://console.anthropic.com/settings/keys"
-    read -sp "  ANTHROPIC_API_KEY: " ANTHROPIC_KEY
-    echo ""
-    if [[ -n "${ANTHROPIC_KEY}" ]]; then
-      echo "ANTHROPIC_API_KEY=${ANTHROPIC_KEY}" >> "${ENV_FILE}"
-      pass "Anthropic API key saved"
-    else
-      fail "Anthropic API key is required"
-      REPORT_STATUS="partial"
-    fi
-  fi
-
-  # OpenAI (optional)
-  if grep -q "OPENAI_API_KEY=" "${ENV_FILE}" 2>/dev/null; then
-    info "OpenAI API key already set"
-  else
-    echo ""
-    echo -e "  ${BOLD}OpenAI API key (optional — fallback model)${RESET}"
-    read -sp "  OPENAI_API_KEY (enter to skip): " OPENAI_KEY
-    echo ""
-    if [[ -n "${OPENAI_KEY}" ]]; then
-      echo "OPENAI_API_KEY=${OPENAI_KEY}" >> "${ENV_FILE}"
-      pass "OpenAI API key saved"
-    else
-      info "Skipped OpenAI key"
-    fi
-  fi
-
-  # Exa (optional)
-  if grep -q "EXA_API_KEY=" "${ENV_FILE}" 2>/dev/null; then
-    info "Exa API key already set"
-    EXA_CONFIGURED=true
-  else
-    echo ""
-    echo -e "  ${BOLD}Exa API key (optional — web search)${RESET}"
-    echo "  Get one at: https://exa.ai"
-    read -sp "  EXA_API_KEY (enter to skip): " EXA_KEY
-    echo ""
-    if [[ -n "${EXA_KEY}" ]]; then
-      echo "EXA_API_KEY=${EXA_KEY}" >> "${ENV_FILE}"
-      pass "Exa API key saved"
-      EXA_CONFIGURED=true
-    else
-      info "Skipped Exa key"
-    fi
-  fi
-
-  chmod 600 "${ENV_FILE}"
-  pass "API keys written to ${ENV_FILE}"
-else
-  info "[dry-run] Would prompt for: ANTHROPIC_API_KEY, OPENAI_API_KEY, EXA_API_KEY"
+if [[ -z "${AUTH_MODE}" ]] && ! $DRY_RUN; then
+  echo ""
+  echo -e "  ${BOLD}Select authentication method:${RESET}"
+  echo "    1) OAuth (Claude Max / ChatGPT Pro subscription) — recommended for managed clients"
+  echo "    2) API Keys (Anthropic / OpenAI direct)"
+  echo ""
+  read -p "  Choice [1/2]: " AUTH_CHOICE
+  case "${AUTH_CHOICE}" in
+    1) AUTH_MODE="oauth" ;;
+    2) AUTH_MODE="apikey" ;;
+    *) info "Invalid choice, defaulting to API keys"; AUTH_MODE="apikey" ;;
+  esac
+elif [[ -z "${AUTH_MODE}" ]]; then
+  AUTH_MODE="apikey"
 fi
 
-report_add "api_keys_configured" "true"
+info "Auth mode: ${AUTH_MODE}"
+report_add "auth_mode" "\"${AUTH_MODE}\""
+
+# ═════════════════════════════════════════════════════════════════
+# 5a. OAUTH FLOW
+# ═════════════════════════════════════════════════════════════════
+if [[ "${AUTH_MODE}" == "oauth" ]]; then
+  step "Setting up OAuth authentication"
+
+  # Select provider if not already set
+  if [[ -z "${OAUTH_PROVIDER}" ]] && ! $DRY_RUN; then
+    echo ""
+    echo -e "  ${BOLD}Select OAuth provider:${RESET}"
+    echo "    1) Claude Max (Anthropic)"
+    echo "    2) ChatGPT Pro (OpenAI)"
+    echo ""
+    read -p "  Provider [1/2]: " PROVIDER_CHOICE
+    case "${PROVIDER_CHOICE}" in
+      1) OAUTH_PROVIDER="anthropic" ;;
+      2) OAUTH_PROVIDER="openai" ;;
+      *) info "Invalid choice, defaulting to Anthropic"; OAUTH_PROVIDER="anthropic" ;;
+    esac
+  elif [[ -z "${OAUTH_PROVIDER}" ]]; then
+    OAUTH_PROVIDER="anthropic"
+  fi
+
+  info "OAuth provider: ${OAUTH_PROVIDER}"
+  report_add "oauth_provider" "\"${OAUTH_PROVIDER}\""
+
+  if ! $DRY_RUN; then
+    echo ""
+    info "Opening browser for OAuth login..."
+
+    if [[ "${OAUTH_PROVIDER}" == "openai" ]]; then
+      openclaw auth login --provider openai || {
+        fail "OAuth login failed for OpenAI"
+        REPORT_STATUS="partial"
+      }
+    else
+      openclaw auth login || {
+        fail "OAuth login failed for Anthropic"
+        REPORT_STATUS="partial"
+      }
+    fi
+
+    # Verify auth succeeded
+    sleep 2
+    if openclaw auth status 2>/dev/null | grep -qi "logged in\|authenticated"; then
+      pass "OAuth authentication successful"
+    else
+      fail "OAuth authentication could not be verified"
+      warn "You may need to run openclaw auth login manually"
+      REPORT_STATUS="partial"
+    fi
+  else
+    info "[dry-run] Would run: openclaw auth login ${OAUTH_PROVIDER:+--provider ${OAUTH_PROVIDER}}"
+  fi
+
+  # Exa key (still needed separately for web search)
+  if ! $DRY_RUN; then
+    mkdir -p "${OPENCLAW_DIR}"
+    ENV_FILE="${OPENCLAW_DIR}/.env"
+    [[ -f "${ENV_FILE}" ]] || touch "${ENV_FILE}"
+
+    if grep -q "EXA_API_KEY=" "${ENV_FILE}" 2>/dev/null; then
+      info "Exa API key already set"
+      EXA_CONFIGURED=true
+    else
+      echo ""
+      echo -e "  ${BOLD}Exa API key (optional — web search)${RESET}"
+      echo "  Get one at: https://exa.ai"
+      read -sp "  EXA_API_KEY (enter to skip): " EXA_KEY
+      echo ""
+      if [[ -n "${EXA_KEY}" ]]; then
+        echo "EXA_API_KEY=${EXA_KEY}" >> "${ENV_FILE}"
+        pass "Exa API key saved"
+        EXA_CONFIGURED=true
+      else
+        info "Skipped Exa key"
+      fi
+    fi
+
+    chmod 600 "${ENV_FILE}"
+  else
+    info "[dry-run] Would prompt for: EXA_API_KEY"
+  fi
+
+  report_add "api_keys_configured" "true"
+
+# ═════════════════════════════════════════════════════════════════
+# 5b. API KEY FLOW
+# ═════════════════════════════════════════════════════════════════
+else
+  step "Configuring API keys"
+
+  if ! $DRY_RUN; then
+    mkdir -p "${OPENCLAW_DIR}"
+    ENV_FILE="${OPENCLAW_DIR}/.env"
+    [[ -f "${ENV_FILE}" ]] || touch "${ENV_FILE}"
+
+    # Anthropic (required)
+    if grep -q "ANTHROPIC_API_KEY=" "${ENV_FILE}" 2>/dev/null; then
+      info "Anthropic API key already set"
+    else
+      echo ""
+      echo -e "  ${BOLD}Anthropic API key (required)${RESET}"
+      echo "  Get one at: https://console.anthropic.com/settings/keys"
+      read -sp "  ANTHROPIC_API_KEY: " ANTHROPIC_KEY
+      echo ""
+      if [[ -n "${ANTHROPIC_KEY}" ]]; then
+        echo "ANTHROPIC_API_KEY=${ANTHROPIC_KEY}" >> "${ENV_FILE}"
+        pass "Anthropic API key saved"
+      else
+        fail "Anthropic API key is required"
+        REPORT_STATUS="partial"
+      fi
+    fi
+
+    # OpenAI (optional)
+    if grep -q "OPENAI_API_KEY=" "${ENV_FILE}" 2>/dev/null; then
+      info "OpenAI API key already set"
+    else
+      echo ""
+      echo -e "  ${BOLD}OpenAI API key (optional — fallback model)${RESET}"
+      read -sp "  OPENAI_API_KEY (enter to skip): " OPENAI_KEY
+      echo ""
+      if [[ -n "${OPENAI_KEY}" ]]; then
+        echo "OPENAI_API_KEY=${OPENAI_KEY}" >> "${ENV_FILE}"
+        pass "OpenAI API key saved"
+      else
+        info "Skipped OpenAI key"
+      fi
+    fi
+
+    # Exa (optional)
+    if grep -q "EXA_API_KEY=" "${ENV_FILE}" 2>/dev/null; then
+      info "Exa API key already set"
+      EXA_CONFIGURED=true
+    else
+      echo ""
+      echo -e "  ${BOLD}Exa API key (optional — web search)${RESET}"
+      echo "  Get one at: https://exa.ai"
+      read -sp "  EXA_API_KEY (enter to skip): " EXA_KEY
+      echo ""
+      if [[ -n "${EXA_KEY}" ]]; then
+        echo "EXA_API_KEY=${EXA_KEY}" >> "${ENV_FILE}"
+        pass "Exa API key saved"
+        EXA_CONFIGURED=true
+      else
+        info "Skipped Exa key"
+      fi
+    fi
+
+    chmod 600 "${ENV_FILE}"
+    pass "API keys written to ${ENV_FILE}"
+  else
+    info "[dry-run] Would prompt for: ANTHROPIC_API_KEY, OPENAI_API_KEY, EXA_API_KEY"
+  fi
+
+  report_add "api_keys_configured" "true"
+fi
 
 # ═════════════════════════════════════════════════════════════════
 # 7-8. ENABLE PLUGINS & CONFIGURE EXA
@@ -519,11 +649,20 @@ else
 fi
 
 CHECKS_TOTAL=$((CHECKS_TOTAL + 1))
-if [[ -f "${OPENCLAW_DIR}/.env" ]]; then
-  pass "API keys file exists"
-  CHECKS_PASSED=$((CHECKS_PASSED + 1))
+if [[ "${AUTH_MODE}" == "oauth" ]]; then
+  if command -v openclaw &>/dev/null && openclaw auth status 2>/dev/null | grep -qi "logged in\|authenticated"; then
+    pass "OAuth session active"
+    CHECKS_PASSED=$((CHECKS_PASSED + 1))
+  else
+    fail "OAuth session not active"
+  fi
 else
-  fail "API keys file missing"
+  if [[ -f "${OPENCLAW_DIR}/.env" ]]; then
+    pass "API keys file exists"
+    CHECKS_PASSED=$((CHECKS_PASSED + 1))
+  else
+    fail "API keys file missing"
+  fi
 fi
 
 if ! $DRY_RUN; then
@@ -588,7 +727,11 @@ echo -e "${BOLD}═════════════════════�
 echo ""
 echo -e "  workspace:     ${WORKSPACE}"
 echo -e "  config:        ${OPENCLAW_DIR}/openclaw.json"
-echo -e "  api keys:      ${OPENCLAW_DIR}/.env"
+if [[ "${AUTH_MODE}" == "oauth" ]]; then
+  echo -e "  auth:          OAuth (${OAUTH_PROVIDER:-anthropic})"
+else
+  echo -e "  auth:          API keys (${OPENCLAW_DIR}/.env)"
+fi
 echo -e "  gateway:       http://127.0.0.1:${GATEWAY_PORT}"
 echo -e "  verification:  ${CHECKS_PASSED}/${CHECKS_TOTAL} checks passed"
 echo -e "  report:        ${REPORT_FILE}"
