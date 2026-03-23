@@ -2,6 +2,8 @@
 
 A battle-tested workspace template for giving your AI agent personality, memory, autonomy, and a whole squad.
 
+Compatible with **OpenClaw 2026.3.22+**.
+
 Built by [@jeffweisbein](https://x.com/jeffweisbein) — shared on [This Week in Startups](https://thisweekinstartups.com).
 
 ## What is this?
@@ -50,6 +52,7 @@ openclaw gateway start
 | `USER.md` | About you — preferences, work style, projects |
 | `IDENTITY.md` | The AI's own identity — name, vibe, emoji |
 | `MEMORY.md` | Long-term memory — curated by the AI over time |
+| `MISTAKES.md` | Mistake log — tracks agent errors so they don't repeat |
 | `HEARTBEAT.md` | Periodic checks — what to monitor proactively |
 | `TOOLS.md` | Local tool notes — device names, SSH hosts, quirks |
 | `SQUAD.md` | Multi-agent setup guide - how to run a team of AI agents |
@@ -106,6 +109,7 @@ Battle-tested governance:
 - **`health-check.sh`** — monitors agent processes + disk usage, alerts via iMessage if something goes down. supports local + remote machines
 - **`example-heartbeat-check.sh`** — template for efficient heartbeat checks (scripts are free, model time is expensive)
 - **`watchdog.sh`** — self-healing process monitor that restarts crashed agents
+- **`oca-provision.sh`** — OCA client provisioning (OpenClaw + starter kit install, used by HypeLab)
 
 ## How Memory Works
 
@@ -123,6 +127,18 @@ Session 2: AI wakes up fresh, reads MEMORY.md
 **Long-term** (`MEMORY.md`) = curated wisdom, reviewed and distilled periodically
 
 The AI maintains its own memory during heartbeats — reviewing daily logs and updating MEMORY.md like a human reviewing their journal.
+
+### Memory Consolidation
+
+Your agent gets smarter overnight. A nightly consolidation cron (2am) automatically:
+
+1. Reviews the day's conversations for unsaved decisions, preferences, and corrections
+2. Stores anything it missed into long-term memory
+3. Cleans up stale or outdated memories
+4. Cross-references `MISTAKES.md` to ensure every logged mistake has a prevention rule
+5. Writes a summary to `memory/consolidation-YYYY-MM-DD.md`
+
+A weekly cleanup job (Sundays 3am) deduplicates, merges related memories, and archives old entries. See `MEMORY.md` for setup instructions.
 
 ## How the Agent Squad Works
 

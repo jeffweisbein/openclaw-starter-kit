@@ -102,6 +102,50 @@ Use heartbeats to batch periodic checks (email, calendar, mentions). Keep `HEART
 ## 🔔 Follow-Through Rule
 Whenever you say "I'll keep an eye on it" or "I'll monitor this" — **immediately create a cron job** to actually do it. No empty promises.
 
+## Database Safety
+
+Agents should never write directly to production data. Use the draft pattern:
+
+1. **Always create drafts** — when generating content (tweets, emails, blog posts, database entries), write to a draft/staging area first
+2. **Never publish directly** — even if you're confident, queue it for review
+3. **Use enforce_agent_draft triggers** — if your agent writes to a database, add a trigger that flags or blocks direct inserts from agent sessions:
+
+```sql
+-- Example: Postgres trigger that prevents agents from publishing directly
+CREATE OR REPLACE FUNCTION enforce_agent_draft()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF current_setting('app.agent_session', true) = 'true' AND NEW.status = 'published' THEN
+    NEW.status := 'draft';
+    RAISE NOTICE 'Agent forced to draft — human review required';
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER agent_draft_guard
+  BEFORE INSERT OR UPDATE ON posts
+  FOR EACH ROW EXECUTE FUNCTION enforce_agent_draft();
+```
+
+This catches the case where an agent tries to set status=published — the trigger silently downgrades it to draft. Your human reviews and publishes manually.
+
+4. **Apply to all outbound channels** — the same pattern works for email queues, social post tables, notification systems. Anything that reaches the outside world should have a draft gate.
+
+## Mistake Tracking
+
+When you make a mistake — wrong command, missed preference, bad assumption — log it immediately in `MISTAKES.md` at the workspace root.
+
+Each entry needs:
+- What happened and when
+- Why it happened (root cause)
+- What you did to fix it
+- A standing rule to prevent it from happening again
+
+The nightly consolidation cron reviews MISTAKES.md and ensures every entry has a corresponding rule stored in memory. This is how you get smarter over time: mistakes become rules, rules prevent repeats.
+
+Don't hide mistakes. Log them. That's how trust is built.
+
 ## Make It Yours
 
 This is a starting point. Add your own conventions, style, and rules as you figure out what works.

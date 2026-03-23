@@ -36,3 +36,34 @@ Think of it as the AI's journal - distilled wisdom, not raw logs.
 
 ### Rules & Lessons
 <!-- things learned the hard way -->
+
+## Nightly Memory Consolidation
+
+Your agent's memory improves overnight. A nightly consolidation job runs at 2am and does four things:
+
+1. **Extract unsaved context** — reviews the day's conversations for decisions, preferences, corrections, and facts that weren't saved to memory during the session
+2. **Clean stale memories** — removes or updates memories that are no longer accurate (old project states, resolved bugs, outdated preferences)
+3. **Review MISTAKES.md** — checks the mistake log and ensures each entry has a corresponding standing rule in memory
+4. **Write a summary** — saves a consolidation report to `memory/consolidation-YYYY-MM-DD.md`
+
+### Setting up consolidation
+
+```bash
+# Add the nightly consolidation cron (runs at 2am daily)
+openclaw cron add "nightly-consolidation" \
+  --schedule "0 2 * * *" \
+  --prompt "Review today's conversations. Extract any unsaved decisions, preferences, or corrections into memory. Clean up stale memories. Check MISTAKES.md for entries missing standing rules. Write a summary to memory/consolidation-$(date +%Y-%m-%d).md."
+
+# Optional: weekly deep cleanup (Sundays at 3am)
+openclaw cron add "weekly-memory-cleanup" \
+  --schedule "0 3 * * 0" \
+  --prompt "Deep review of all memories. Deduplicate, merge related entries, archive anything older than 90 days that hasn't been accessed. Update MEMORY.md sections."
+```
+
+The consolidation job makes your agent smarter over time without you doing anything. Decisions you make in conversation on Monday are searchable context by Tuesday morning.
+
+## MISTAKES.md — Learning from Errors
+
+Your agent maintains `MISTAKES.md` at the workspace root. When something goes wrong — a bad command, a missed preference, a wrong assumption — the agent logs it with a root cause and a standing rule.
+
+The nightly consolidation job cross-references MISTAKES.md entries with stored memories to make sure every mistake has a prevention rule. This closes the loop: mistake happens → gets logged → consolidation creates a rule → agent never repeats it.
