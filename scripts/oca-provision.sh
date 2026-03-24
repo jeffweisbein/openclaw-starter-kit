@@ -301,12 +301,12 @@ if [[ "${AUTH_MODE}" == "oauth" ]]; then
     info "Opening browser for OAuth login..."
 
     if [[ "${OAUTH_PROVIDER}" == "openai" ]]; then
-      openclaw auth login --provider openai || {
+      openclaw onboard --auth-choice openai-codex || {
         fail "OAuth login failed for OpenAI"
         REPORT_STATUS="partial"
       }
     else
-      openclaw auth login || {
+      openclaw onboard --auth-choice oauth || {
         fail "OAuth login failed for Anthropic"
         REPORT_STATUS="partial"
       }

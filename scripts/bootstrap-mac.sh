@@ -34,6 +34,7 @@ while [[ $# -gt 0 ]]; do
     --alert) ALERT_NUMBER="$2"; shift 2 ;;
     --peer) PEER_GATEWAY="$2"; shift 2 ;;
     --workspace) WORKSPACE="$2"; shift 2 ;;
+    --auth) AUTH_MODE="$2"; shift 2 ;;
     *) echo "unknown arg: $1"; exit 1 ;;
   esac
 done
@@ -246,6 +247,14 @@ fi
 
 # --- 10. Gateway setup via openclaw onboard ---
 step "running openclaw onboard..."
+if [[ -n "$AUTH_MODE" ]]; then
+  echo "  setting up auth: $AUTH_MODE"
+  if [[ "$AUTH_MODE" == "oauth" ]]; then
+    openclaw onboard --auth-choice oauth
+  else
+    openclaw onboard --auth-choice "$AUTH_MODE"
+  fi
+fi
 openclaw gateway install 2>/dev/null || true
 
 # --- 11. Start gateway ---
