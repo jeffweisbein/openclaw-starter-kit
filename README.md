@@ -2,8 +2,6 @@
 
 A battle-tested workspace template for giving your AI agent personality, memory, autonomy, and a whole squad.
 
-Compatible with **OpenClaw 2026.3.22+**.
-
 Built by [@jeffweisbein](https://x.com/jeffweisbein) — shared on [This Week in Startups](https://thisweekinstartups.com).
 
 ## What is this?
@@ -52,7 +50,6 @@ openclaw gateway start
 | `USER.md` | About you — preferences, work style, projects |
 | `IDENTITY.md` | The AI's own identity — name, vibe, emoji |
 | `MEMORY.md` | Long-term memory — curated by the AI over time |
-| `MISTAKES.md` | Mistake log — tracks agent errors so they don't repeat |
 | `HEARTBEAT.md` | Periodic checks — what to monitor proactively |
 | `TOOLS.md` | Local tool notes — device names, SSH hosts, quirks |
 | `SQUAD.md` | Multi-agent setup guide - how to run a team of AI agents |
@@ -105,11 +102,14 @@ Battle-tested governance:
 
 ### Scripts (`scripts/`)
 
-- **`auto-backup.sh`** — hourly git backup of your workspace. set it as a cron and never lose context again
-- **`health-check.sh`** — monitors agent processes + disk usage, alerts via iMessage if something goes down. supports local + remote machines
+- **`worktree-agent.sh`** — spawn coding agents in isolated git worktrees (prevents agents from stepping on each other)
+- **`check-agents.sh`** — deterministic task monitor that checks agent status without burning tokens
+- **`quality-gate.sh`** — only notifies you when a PR is truly ready (CI passed + no conflicts)
+- **`cleanup-worktrees.sh`** — daily cleanup of merged worktrees and stale tasks
+- **`auto-backup.sh`** — hourly git backup of your workspace
+- **`health-check.sh`** — monitors agent processes + disk usage, alerts via iMessage
 - **`example-heartbeat-check.sh`** — template for efficient heartbeat checks (scripts are free, model time is expensive)
 - **`watchdog.sh`** — self-healing process monitor that restarts crashed agents
-- **`oca-provision.sh`** — OCA client provisioning (OpenClaw + starter kit install, used by HypeLab)
 
 ## How Memory Works
 
@@ -128,17 +128,43 @@ Session 2: AI wakes up fresh, reads MEMORY.md
 
 The AI maintains its own memory during heartbeats — reviewing daily logs and updating MEMORY.md like a human reviewing their journal.
 
-### Memory Consolidation
+## Worktree Isolation (NEW)
 
-Your agent gets smarter overnight. A nightly consolidation cron (2am) automatically:
+The biggest risk when running parallel coding agents: they clobber each other's work. Agent A removes code that Agent B just wrote. We learned this the hard way.
 
-1. Reviews the day's conversations for unsaved decisions, preferences, and corrections
-2. Stores anything it missed into long-term memory
-3. Cleans up stale or outdated memories
-4. Cross-references `MISTAKES.md` to ensure every logged mistake has a prevention rule
-5. Writes a summary to `memory/consolidation-YYYY-MM-DD.md`
+**Solution: git worktrees.** Each agent gets its own isolated copy of the codebase on its own branch.
 
-A weekly cleanup job (Sundays 3am) deduplicates, merges related memories, and archives old entries. See `MEMORY.md` for setup instructions.
+```bash
+# Spawn an agent in an isolated worktree
+./scripts/worktree-agent.sh ~/code/myapp feat/new-api "Build the REST API"
+
+# Run multiple agents in parallel — no conflicts
+./scripts/worktree-agent.sh ~/code/myapp feat/dashboard "Build admin dashboard"
+./scripts/worktree-agent.sh ~/code/myapp fix/auth-bug "Fix the OAuth token refresh"
+```
+
+The `check-agents.sh` script monitors all running tasks every 5-10 minutes — zero tokens burned. It only outputs when something needs human attention (PR ready, CI failed, agent stale).
+
+When branches are merged, `cleanup-worktrees.sh` removes the worktree directories automatically.
+
+## Quality Gates (NEW)
+
+Stop getting pinged every time an agent opens a PR. Instead, get notified when a PR is **actually ready**:
+
+```bash
+# Only outputs when all checks pass
+./scripts/quality-gate.sh myorg/myrepo 42
+# → READY: PR #42 — Add user dashboard (8 files changed)
+```
+
+Set this up in a cron to monitor all open PRs. Your agent only bothers you when something is genuinely ready to merge or needs your attention.
+
+**Definition of done** (teach this to your agents):
+- PR created and pushed
+- Branch synced to main (no merge conflicts)
+- CI passing (lint, types, tests)
+- Build succeeds
+- Screenshots included (if UI changes)
 
 ## How the Agent Squad Works
 
@@ -204,6 +230,32 @@ bash scripts/health-check.sh
 ```
 
 Status is written to `data/health.json` for dashboard use.
+
+## Cron Pipeline Pattern (NEW)
+
+Chain cron jobs to build automated pipelines. Each job runs at a set time, writes output to files, and downstream jobs pick it up:
+
+```
+7:00am  → news scan → writes to news-scans/industry-YYYY-MM-DD.md
+9:00am  → content ideas (reads news scans) → pushes to drafts queue
+10:00am → pitch evaluator (reads news scans) → pushes to pitch queue
+```
+
+Each step is an isolated agent turn. No mega-sessions. No token bloat. Each agent gets fresh context with just what it needs.
+
+Example cron setup:
+```json
+{
+  "name": "morning-news-scan",
+  "schedule": { "kind": "cron", "expr": "0 7 * * 1-5", "tz": "America/New_York" },
+  "payload": {
+    "kind": "agentTurn",
+    "message": "Scan industry news and save findings to news-scans/",
+    "timeoutSeconds": 300
+  },
+  "sessionTarget": "isolated"
+}
+```
 
 ## Philosophy
 
