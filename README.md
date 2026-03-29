@@ -4,6 +4,15 @@ A battle-tested workspace template for giving your AI agent personality, memory,
 
 Built by [@jeffweisbein](https://x.com/jeffweisbein) — shared on [This Week in Startups](https://thisweekinstartups.com).
 
+## What's New (v2.1 — March 28, 2026)
+
+- **Leaner core files** — AGENTS.md, TOOLS.md, SOUL.md, MEMORY.md all trimmed 60-75%. faster session startup, more context window for actual work.
+- **Memory archival pattern** — MEMORY.md now has a 10k char target with weekly archival to `docs/archive/`. your agent stays fast instead of accumulating bloat.
+- **Improved HEARTBEAT.md** — explicit "scripts are free, model time is expensive" pattern with memory maintenance built in.
+- **TOOLS.md as a lean cheat sheet** — no more verbose examples. just your local notes.
+- **Better safety defaults** — `trash` > `rm`, follow-through rule (promise to monitor → create a cron), platform formatting tips.
+- **Cron pipeline pattern** — documented the morning automation pipeline (news scan → content ideas → pitch evaluation).
+
 ## What is this?
 
 This is the exact workspace structure that powers a personal AI assistant with:
