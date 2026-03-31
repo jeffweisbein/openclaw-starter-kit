@@ -2,16 +2,9 @@
 
 A battle-tested workspace template for giving your AI agent personality, memory, autonomy, and a whole squad.
 
+Compatible with **OpenClaw 2026.3.22+**.
+
 Built by [@jeffweisbein](https://x.com/jeffweisbein) — shared on [This Week in Startups](https://thisweekinstartups.com).
-
-## What's New (v2.1 — March 28, 2026)
-
-- **Leaner core files** — AGENTS.md, TOOLS.md, SOUL.md, MEMORY.md all trimmed 60-75%. faster session startup, more context window for actual work.
-- **Memory archival pattern** — MEMORY.md now has a 10k char target with weekly archival to `docs/archive/`. your agent stays fast instead of accumulating bloat.
-- **Improved HEARTBEAT.md** — explicit "scripts are free, model time is expensive" pattern with memory maintenance built in.
-- **TOOLS.md as a lean cheat sheet** — no more verbose examples. just your local notes.
-- **Better safety defaults** — `trash` > `rm`, follow-through rule (promise to monitor → create a cron), platform formatting tips.
-- **Cron pipeline pattern** — documented the morning automation pipeline (news scan → content ideas → pitch evaluation).
 
 ## What is this?
 
@@ -59,6 +52,7 @@ openclaw gateway start
 | `USER.md` | About you — preferences, work style, projects |
 | `IDENTITY.md` | The AI's own identity — name, vibe, emoji |
 | `MEMORY.md` | Long-term memory — curated by the AI over time |
+| `MISTAKES.md` | Mistake log — tracks agent errors so they don't repeat |
 | `HEARTBEAT.md` | Periodic checks — what to monitor proactively |
 | `TOOLS.md` | Local tool notes — device names, SSH hosts, quirks |
 | `SQUAD.md` | Multi-agent setup guide - how to run a team of AI agents |
@@ -77,7 +71,9 @@ agents/
 ├── dev-agent/        — code review, monitoring, bug triage
 │   ├── SOUL.md
 │   └── TICK.md       — activity log
-└── research-agent/   — analytics, competitors, market intel
+├── research-agent/   — analytics, competitors, market intel
+└── verify-agent/     — adversarial code reviewer (read-only, tries to break changes)
+    └── AGENT.md      — verification specification
     ├── SOUL.md
     └── FINDINGS.md   — research reports
 ```
@@ -111,69 +107,42 @@ Battle-tested governance:
 
 ### Scripts (`scripts/`)
 
-- **`worktree-agent.sh`** — spawn coding agents in isolated git worktrees (prevents agents from stepping on each other)
-- **`check-agents.sh`** — deterministic task monitor that checks agent status without burning tokens
-- **`quality-gate.sh`** — only notifies you when a PR is truly ready (CI passed + no conflicts)
-- **`cleanup-worktrees.sh`** — daily cleanup of merged worktrees and stale tasks
-- **`auto-backup.sh`** — hourly git backup of your workspace
-- **`health-check.sh`** — monitors agent processes + disk usage, alerts via iMessage
+- **`auto-backup.sh`** — hourly git backup of your workspace. set it as a cron and never lose context again
+- **`health-check.sh`** — monitors agent processes + disk usage, alerts via iMessage if something goes down. supports local + remote machines
 - **`example-heartbeat-check.sh`** — template for efficient heartbeat checks (scripts are free, model time is expensive)
 - **`watchdog.sh`** — self-healing process monitor that restarts crashed agents
+- **`oca-provision.sh`** — OCA client provisioning (OpenClaw + starter kit install, used by HypeLab)
 
 ## How Memory Works
 
+Memory uses an **index pattern**: MEMORY.md is a lightweight index (~30 lines) that points to typed topic files in `memory/`.
+
 ```
-Session 1: AI learns you prefer short updates
-  → writes to memory/2026-02-23.md
-  → updates MEMORY.md with the preference
-
-Session 2: AI wakes up fresh, reads MEMORY.md
-  → knows your preferences from day one
-  → continues where it left off
-```
-
-**Daily files** (`memory/YYYY-MM-DD.md`) = raw logs of what happened
-**Long-term** (`MEMORY.md`) = curated wisdom, reviewed and distilled periodically
-
-The AI maintains its own memory during heartbeats — reviewing daily logs and updating MEMORY.md like a human reviewing their journal.
-
-## Worktree Isolation (NEW)
-
-The biggest risk when running parallel coding agents: they clobber each other's work. Agent A removes code that Agent B just wrote. We learned this the hard way.
-
-**Solution: git worktrees.** Each agent gets its own isolated copy of the codebase on its own branch.
-
-```bash
-# Spawn an agent in an isolated worktree
-./scripts/worktree-agent.sh ~/code/myapp feat/new-api "Build the REST API"
-
-# Run multiple agents in parallel — no conflicts
-./scripts/worktree-agent.sh ~/code/myapp feat/dashboard "Build admin dashboard"
-./scripts/worktree-agent.sh ~/code/myapp fix/auth-bug "Fix the OAuth token refresh"
+MEMORY.md              ← Index only (one-line pointers, max 200 lines)
+memory/
+├── user-profile.md    ← Who you are, preferences, expertise
+├── feedback-rules.md  ← Corrections and confirmed approaches
+├── project-active.md  ← Current work, goals, deadlines
+├── reference-gotchas.md ← Technical gotchas that cause bugs
+└── reference-infra.md ← Server configs, deploy setup
 ```
 
-The `check-agents.sh` script monitors all running tasks every 5-10 minutes — zero tokens burned. It only outputs when something needs human attention (PR ready, CI failed, agent stale).
+Each topic file uses frontmatter with a type (user, feedback, project, reference).
 
-When branches are merged, `cleanup-worktrees.sh` removes the worktree directories automatically.
+**Why this pattern?** A monolithic MEMORY.md grows until it eats your context window. The index stays small (always loaded) while topic files are read on-demand when relevant. Types help the AI decide what to save where.
 
-## Quality Gates (NEW)
+**What NOT to store:** Code patterns (read the code), git history (use git log), debugging solutions (the fix is in the code), anything in CLAUDE.md. If the user asks you to save a PR list, ask what was surprising about it — that part is worth keeping.
 
-Stop getting pinged every time an agent opens a PR. Instead, get notified when a PR is **actually ready**:
+### Memory Consolidation
 
-```bash
-# Only outputs when all checks pass
-./scripts/quality-gate.sh myorg/myrepo 42
-# → READY: PR #42 — Add user dashboard (8 files changed)
-```
+Your agent gets smarter overnight. A nightly consolidation cron (2am) automatically:
 
-Set this up in a cron to monitor all open PRs. Your agent only bothers you when something is genuinely ready to merge or needs your attention.
+1. Reviews conversations for unsaved decisions, preferences, and corrections
+2. Stores them as typed memory files (not raw session dumps)
+3. Cleans stale memories and updates the index
+4. Cross-references MISTAKES.md to ensure every mistake has a prevention rule
 
-**Definition of done** (teach this to your agents):
-- PR created and pushed
-- Branch synced to main (no merge conflicts)
-- CI passing (lint, types, tests)
-- Build succeeds
-- Screenshots included (if UI changes)
+See MEMORY.md for setup instructions.
 
 ## How the Agent Squad Works
 
@@ -240,32 +209,6 @@ bash scripts/health-check.sh
 
 Status is written to `data/health.json` for dashboard use.
 
-## Cron Pipeline Pattern (NEW)
-
-Chain cron jobs to build automated pipelines. Each job runs at a set time, writes output to files, and downstream jobs pick it up:
-
-```
-7:00am  → news scan → writes to news-scans/industry-YYYY-MM-DD.md
-9:00am  → content ideas (reads news scans) → pushes to drafts queue
-10:00am → pitch evaluator (reads news scans) → pushes to pitch queue
-```
-
-Each step is an isolated agent turn. No mega-sessions. No token bloat. Each agent gets fresh context with just what it needs.
-
-Example cron setup:
-```json
-{
-  "name": "morning-news-scan",
-  "schedule": { "kind": "cron", "expr": "0 7 * * 1-5", "tz": "America/New_York" },
-  "payload": {
-    "kind": "agentTurn",
-    "message": "Scan industry news and save findings to news-scans/",
-    "timeoutSeconds": 300
-  },
-  "sessionTarget": "isolated"
-}
-```
-
 ## Philosophy
 
 > Scripts are free. Model time is expensive.
@@ -283,3 +226,27 @@ Fill in USER.md. Name your AI. Tell it your preferences. The more it knows, the 
 ---
 
 Built with [OpenClaw](https://openclaw.ai) • [Docs](https://docs.openclaw.ai) • [Community](https://discord.com/invite/clawd) • [More Skills](https://clawhub.com)
+
+## Verification Agent
+
+The starter kit includes a verification agent (`agents/verify-agent/`) that acts as an adversarial code reviewer. After non-trivial implementations, spawn it to try to break your changes before reporting them done.
+
+```bash
+openclaw spawn verify-agent --task "Verify changes in ~/code/myapp. Files changed: src/api.ts, src/db.ts. Run builds, tests, linters. Try to break it."
+```
+
+The verifier is read-only (cannot modify your code) and produces a PASS/FAIL/PARTIAL verdict with actual command output as evidence. It fights the common LLM pattern of "reading code and saying it looks correct" instead of actually running it.
+
+See `agents/verify-agent/AGENT.md` for the full specification.
+
+## Code Style Rules
+
+Add these rules to your project CLAUDE.md files to prevent the most common LLM coding mistakes:
+
+**Minimal Changes** — Do not add features, refactor code, or make improvements beyond what was asked. Do not add docstrings or comments to code you did not change. Only add comments where the logic is not self-evident.
+
+**No Speculative Code** — Do not add error handling for scenarios that cannot happen. Do not create helpers or abstractions for one-time operations. Three similar lines of code is better than a premature abstraction.
+
+**Honest Reporting** — If tests fail, say so with the output. If you did not run a verification step, say that rather than implying it succeeded. Never claim "all tests pass" when output shows failures.
+
+These rules target three LLM failure patterns: gold-plating (adding unrequested improvements), speculative engineering (building for hypothetical futures), and success theater (claiming things work without running them).
