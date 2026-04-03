@@ -222,27 +222,81 @@ fi
 pass "OpenClaw configured"
 
 # ═════════════════════════════════════════════════════════════════
-# 4. DEPLOY STARTER KIT
+# 4. DEPLOY STARTER KIT (managed/ + user/ split)
 # ═════════════════════════════════════════════════════════════════
 step "Deploying starter kit"
 
-if [[ -d "${WORKSPACE}/.git" ]]; then
-  info "Workspace already has a git repo — pulling latest..."
+# v2.2+: The starter kit has two folders:
+#   managed/ — infrastructure files we own and update freely
+#   user/    — files the client owns, seeded once, never overwritten
+#
+# On fresh install: copy both managed/ and user/ into workspace
+# On update: only copy managed/ — never touch user/ files
+
+STARTER_KIT_TMP="${WORKSPACE}/.starter-kit-tmp"
+
+if [[ -d "${WORKSPACE}/managed" ]]; then
+  # Existing install — update managed/ only
+  info "Existing workspace detected — updating managed/ files only (user/ untouched)"
   if ! $DRY_RUN; then
-    cd "${WORKSPACE}" && git pull --ff-only 2>/dev/null || warn "Could not pull (may have local changes)"
+    rm -rf "${STARTER_KIT_TMP}"
+    git clone --depth 1 "${STARTER_KIT_REPO}" "${STARTER_KIT_TMP}" 2>/dev/null
+    if [[ -d "${STARTER_KIT_TMP}/managed" ]]; then
+      # Backup current managed/ just in case
+      cp -r "${WORKSPACE}/managed" "${WORKSPACE}/managed.bak.$(date +%Y%m%d%H%M%S)" 2>/dev/null || true
+      # Replace managed/ entirely
+      rm -rf "${WORKSPACE}/managed"
+      cp -r "${STARTER_KIT_TMP}/managed" "${WORKSPACE}/managed"
+      pass "Updated managed/ files to $(cat "${WORKSPACE}/managed/VERSION" 2>/dev/null || echo 'latest')"
+    else
+      warn "Cloned repo missing managed/ folder — skipping update"
+    fi
+    rm -rf "${STARTER_KIT_TMP}"
   fi
 elif [[ -d "${WORKSPACE}" ]] && [[ "$(ls -A "${WORKSPACE}" 2>/dev/null)" ]]; then
-  warn "Workspace exists and is not empty — skipping clone to avoid data loss"
-  info "To deploy fresh: rm -rf ${WORKSPACE} && re-run this script"
-else
-  info "Cloning starter kit into ${WORKSPACE}..."
+  # Legacy install (pre-v2.2) or non-empty workspace
+  warn "Workspace exists but no managed/ folder — this may be a pre-v2.2 install"
+  info "Pulling starter kit to install managed/ + user/ structure..."
   if ! $DRY_RUN; then
-    git clone "${STARTER_KIT_REPO}" "${WORKSPACE}"
+    rm -rf "${STARTER_KIT_TMP}"
+    git clone --depth 1 "${STARTER_KIT_REPO}" "${STARTER_KIT_TMP}" 2>/dev/null
+    if [[ -d "${STARTER_KIT_TMP}/managed" ]]; then
+      cp -r "${STARTER_KIT_TMP}/managed" "${WORKSPACE}/managed"
+      pass "Installed managed/ files"
+    fi
+    # Only seed user/ files if they don't already exist
+    if [[ -d "${STARTER_KIT_TMP}/user" ]]; then
+      for f in $(find "${STARTER_KIT_TMP}/user" -type f); do
+        REL_PATH="${f#${STARTER_KIT_TMP}/}"
+        TARGET="${WORKSPACE}/${REL_PATH}"
+        if [[ ! -f "${TARGET}" ]]; then
+          mkdir -p "$(dirname "${TARGET}")"
+          cp "${f}" "${TARGET}"
+          info "Seeded ${REL_PATH}"
+        else
+          info "Skipped ${REL_PATH} (already exists)"
+        fi
+      done
+      pass "User files seeded (existing files preserved)"
+    fi
+    rm -rf "${STARTER_KIT_TMP}"
+  fi
+else
+  # Fresh install — copy everything
+  info "Fresh install — cloning starter kit into ${WORKSPACE}..."
+  if ! $DRY_RUN; then
+    git clone --depth 1 "${STARTER_KIT_REPO}" "${STARTER_KIT_TMP}" 2>/dev/null
+    mkdir -p "${WORKSPACE}"
+    cp -r "${STARTER_KIT_TMP}/managed" "${WORKSPACE}/managed"
+    cp -r "${STARTER_KIT_TMP}/user" "${WORKSPACE}/user"
+    cp "${STARTER_KIT_TMP}/README.md" "${WORKSPACE}/README.md" 2>/dev/null || true
+    rm -rf "${STARTER_KIT_TMP}"
   fi
 fi
 
 pass "Starter kit deployed to ${WORKSPACE}"
 report_add "workspace" "\"${WORKSPACE}\""
+report_add "starter_kit_version" "\"$(cat "${WORKSPACE}/managed/VERSION" 2>/dev/null || echo 'unknown')\""
 
 # ═════════════════════════════════════════════════════════════════
 # 5. SELECT AUTHENTICATION METHOD
@@ -739,7 +793,8 @@ echo -e "  report:        ${REPORT_FILE}"
 [[ -n "${OCA_AGENT_NAME}" ]] && echo -e "  agent:         ${OCA_AGENT_NAME}"
 echo ""
 echo -e "  ${BOLD}Next steps:${RESET}"
-echo "  1. Fill in ${WORKSPACE}/USER.md with client info"
-echo "  2. Fill in ${WORKSPACE}/IDENTITY.md to name the agent"
-echo "  3. Test: openclaw chat \"hello\""
+echo "  1. Fill in ${WORKSPACE}/user/USER.md with client info"
+echo "  2. Fill in ${WORKSPACE}/user/IDENTITY.md to name the agent"
+echo "  3. Add custom rules to ${WORKSPACE}/user/AGENTS.md"
+echo "  4. Test: openclaw chat \"hello\""
 echo ""

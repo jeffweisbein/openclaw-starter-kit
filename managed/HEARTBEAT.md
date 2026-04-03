@@ -1,6 +1,6 @@
 # HEARTBEAT.md
 
-<!-- 
+<!--
 Your AI reads this on every heartbeat poll.
 Keep it SMALL — scripts are free, model time is expensive.
 Only wake the model when scripts produce output.
@@ -17,15 +17,15 @@ Only wake the model when scripts produce output.
 ```
 -->
 
-## Memory maintenance (once per day, first heartbeat after 6pm)
-If today's date differs from "Last updated" in MEMORY.md:
+## Memory Maintenance (once per day, first heartbeat after 6pm)
+If today's date differs from "Last updated" in user/MEMORY.md:
 1. Read recent `memory/YYYY-MM-DD.md` files (today + yesterday)
-2. Update MEMORY.md with anything significant
+2. Update user/MEMORY.md with anything significant
 3. Remove outdated info
 4. If MEMORY.md > 10k chars, archive completed items to `docs/archive/memory-archive-YYYY-MM-DD.md`
 5. Update the "Last updated" date
 
-## If all scripts return nothing
+## If All Scripts Return Nothing
 Reply: HEARTBEAT_OK
 
 ---
