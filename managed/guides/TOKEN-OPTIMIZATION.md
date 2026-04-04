@@ -13,6 +13,30 @@ a 50-message conversation might send 100k+ tokens per message. that's why you bu
 
 ## quick wins (free, immediate)
 
+## model routing (automatic)
+
+openclaw's **model-router plugin** automatically routes messages to the cheapest capable model:
+
+- **haiku** (~13k input tokens/$1): short, yes/no, status checks, < 80 chars, simple keywords (ping, check, status)
+- **sonnet** (~3k/$1): default for normal conversation
+- **opus** (~200/$1): architecture, design, complex tradeoffs, >200 chars with "compare" / "strategy" / "tradeoff"
+
+Cost spread: haiku → sonnet is ~5x, haiku → opus is ~15x. routing alone can cut token spend by 40-60%.
+
+Override with message prefixes:
+```
+@haiku give me a status update
+@opus design a caching strategy for this db schema
+@sonnet write a blog post
+@gpt use openai instead
+```
+
+The plugin logs routing decisions to `~/.openclaw/logs/model-routing.jsonl` so you can verify it's working.
+
+Note on images: OpenClaw 2026.4.2+ only prunes images older than 3 assistant turns, preserving prompt cache prefix. On older versions, avoid resending the same image to prevent cache misses.
+
+
+
 ### 1. minimize auto-injected instructions
 
 openclaw's memory-tools plugin auto-injects every memory with `category: instruction` into every single message. each instruction burns tokens on every exchange.

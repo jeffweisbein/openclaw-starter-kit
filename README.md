@@ -2,7 +2,7 @@
 
 A battle-tested workspace template for giving your AI agent personality, memory, autonomy, and a whole squad.
 
-Compatible with **OpenClaw 2026.3.22+**.
+Compatible with **OpenClaw 2026.4.2+**.
 
 Built by [@jeffweisbein](https://x.com/jeffweisbein) — shared on [This Week in Startups](https://thisweekinstartups.com).
 
@@ -48,6 +48,28 @@ mkdir -p ~/clawd/memory
 # Start OpenClaw
 openclaw gateway start
 ```
+
+## Authentication
+
+As of April 4, 2026, Anthropic no longer covers OpenClaw usage under Claude Max/Pro subscriptions. You have three paths forward:
+
+**Recommended: OpenAI-Codex OAuth**
+```bash
+openclaw onboard --auth-choice openai-codex
+```
+Uses your ChatGPT Plus/Pro subscription. Works with all OpenClaw features.
+
+**Alternative: Anthropic API Key**
+Set your environment variable:
+```bash
+export ANTHROPIC_API_KEY="sk-ant-..."
+```
+Pay-as-you-go billing. Good if you use Claude API already.
+
+**Legacy: Claude Subscription**
+Still works via separate usage bundles at claude.ai (not covered by your subscription).
+
+For details, see the [Anthropic announcement](https://www.threads.com/@boris_cherny/post/DWsAWeND5nm/).
 
 ## Want Someone to Set This Up For You?
 
