@@ -6,20 +6,29 @@ Compatible with **OpenClaw 2026.4.18+** (Claude Opus 4.7 supported).
 
 Built by [@jeffweisbein](https://x.com/jeffweisbein) — shared on [This Week in Startups](https://thisweekinstartups.com).
 
-## What's New (v2.2 — April 2, 2026)
+## What's New (v2.3 — April 22, 2026)
+
+- **Claude subscription path restored** — `openclaw onboard --auth-choice anthropic-cli` is the recommended path again, routing Anthropic model calls through the Claude Code CLI so your Max/Pro subscription keeps covering usage. Compatible with OpenClaw 2026.4.18+ and Claude Opus 4.7.
+- **Per-repo AI playbooks** — `managed/templates/AI_PLAYBOOK-template.md` gives your agent ground truth about each repo's shape, risk areas, gotchas, and verification steps. Cuts down on "agent touched the wrong thing" incidents.
+- **Public smoke script template** — `managed/templates/smoke-web.sh.template` pairs with the playbook: parameterized (`BASE_URL` + `PAGES`) check that hits your top pages, fails loud on non-200s or runtime-error bodies, and optionally verifies the Vercel production alias.
+- **Memory docs pulled out of hot context** — `user/MEMORY.md` is loaded into every conversation, so the ~55 lines of how-it-works prose now lives in `managed/guides/MEMORY.md` instead. Fresh installs get a lean 20-line index; existing installs are untouched.
+- **README tree synced** — listing now matches what's actually on disk (`compute-agent/` rename, `verify-agent/`, `memory-templates/`).
+
+### Upgrading from v2.2
+
+If you already have the starter kit installed:
+1. `rsync` or copy the latest `managed/` into your workspace — safe, no `user/` file is touched.
+2. Existing `user/MEMORY.md` stays as-is. If you want the slim index, diff against this repo's `user/MEMORY.md` and trim manually.
+3. In each of your product repos, copy `managed/templates/AI_PLAYBOOK-template.md` to `AI_PLAYBOOK.md` and `managed/templates/smoke-web.sh.template` to `scripts/smoke-web.sh`, then fill them in.
+4. Re-run onboard if your auth currently points at `openai-codex` or `apiKey` and you'd prefer subscription routing: `openclaw onboard --auth-choice anthropic-cli`.
+
+### Previously (v2.2 — April 2, 2026)
 
 - **`managed/` + `user/` split** — files you customize (`user/`) are now cleanly separated from infrastructure files we maintain (`managed/`). Updates to the starter kit only touch `managed/` — your personality, memory, and custom rules are never overwritten.
 - **AGENTS.md split** — operating rules live in `managed/AGENTS-base.md` (updatable). Your custom rules live in `user/AGENTS.md` (yours forever).
 - **Improved operating rules** — better group chat etiquette, platform formatting, memory pruning guidance, one-reaction-max rule.
 - **Mistake tracking** — `user/MISTAKES.md` pattern: log what happened, why, what you fixed, and a rule to prevent it.
 - **Leaner core files** — continued trimming from v2.1. faster session startup, more context window for actual work.
-
-### Upgrading from v2.1
-
-If you already have the starter kit installed:
-1. Copy `managed/` into your workspace (safe — these are all infrastructure files)
-2. Your existing `SOUL.md`, `USER.md`, `IDENTITY.md`, `MEMORY.md`, and agent files are untouched
-3. Optionally move your old `AGENTS.md` to `user/AGENTS.md` and let `managed/AGENTS-base.md` handle the base rules
 
 ## What is this?
 
