@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Public smoke test for your deployed app.
+# Copy to scripts/smoke-web.sh in your app repo, make executable, then run:
+#   ./scripts/smoke-web.sh                          # uses BASE_URL below
+#   ./scripts/smoke-web.sh https://staging.example  # override
+#
+# Wire to your package.json: "smoke:web": "bash scripts/smoke-web.sh"
+
+BASE_URL="${1:-https://your-domain.example}"
+INSPECT_HOST="${INSPECT_HOST:-${BASE_URL#https://}}"
+
+# Edit this list for your app.
+PAGES=(
+  "/"
+  "/pricing"
+  "/about"
+  "/robots.txt"
+  "/sitemap.xml"
+)
+
+BODY_TMP="$(mktemp /tmp/smoke-body.XXXX)"
+trap 'rm -f "$BODY_TMP"' EXIT
+
+check_page() {
+  local path="$1"
+  local url="${BASE_URL}${path}"
+  echo "checking page ${url}"
+  local code
+  code=$(curl -sS -L -o "$BODY_TMP" -w "%{http_code}" "$url")
+  if [[ "$code" != "200" ]]; then
+    echo "FAIL page ${path} returned ${code}"
+    cat "$BODY_TMP"
+    exit 1
+  fi
+  if grep -qiE "internal server error|application error|unexpected end of json input" "$BODY_TMP"; then
+    echo "FAIL page ${path} body suggests runtime failure"
+    cat "$BODY_TMP"
+    exit 1
+  fi
+}
+
+for page in "${PAGES[@]}"; do
+  check_page "$page"
+done
+
+# Optional: verify Vercel production alias if Vercel CLI is installed and authenticated.
+if command -v vercel >/dev/null 2>&1; then
+  echo "checking vercel production alias"
+  inspect_output="$(vercel inspect "$INSPECT_HOST" 2>&1 || true)"
+  if [[ "$inspect_output" != *"$INSPECT_HOST"* ]]; then
+    echo "FAIL vercel inspect did not show ${INSPECT_HOST} alias"
+    printf '%s\n' "$inspect_output"
+    exit 1
+  fi
+fi
+
+echo "smoke passed for ${BASE_URL}"

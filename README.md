@@ -91,15 +91,21 @@ managed/                    ← We maintain these (safe to update)
 ├── TOOLS.md                — Tool notes cheat sheet
 ├── VERSION                 — Current starter kit version
 ├── agents-base/            — Agent infrastructure templates
-│   └── forge/              — Remote coding workhorse setup
+│   ├── compute-agent/      — Remote second-machine pattern (heavy compute)
+│   └── verify-agent/       — Quality-gate / verification agent
 ├── guides/
+│   ├── AI_PLAYBOOK.md      — Shipping per-repo AI playbooks and smoke scripts
 │   ├── MESH.md             — Multi-machine setup
 │   ├── SQUAD.md            — Multi-agent team guide
 │   └── TOKEN-OPTIMIZATION.md — Stretch your subscription 3-5x
+├── memory-templates/       — Typed memory scaffolds (user/feedback/project/reference)
 ├── ops/
 │   ├── policies.json       — Safety policies & auto-approve rules
 │   └── reaction-matrix.json — Agent reaction triggers
-└── scripts/                — Health checks, backups, utilities
+├── scripts/                — Health checks, backups, utilities
+└── templates/
+    ├── AI_PLAYBOOK-template.md — Per-repo playbook starter
+    └── smoke-web.sh.template   — Public smoke script starter
 
 user/                       ← You own these (never overwritten)
 ├── AGENTS.md               — Your custom rules & conventions
