@@ -25,7 +25,7 @@ If you already have the starter kit installed:
 
 This is the exact workspace structure that powers a personal AI assistant with:
 
-- 🧠 **Persistent memory** across sessions (daily logs + curated long-term memory)
+- 🧠 **Persistent memory** across sessions — typed, file-based memory with a lean index loaded every conversation ([how it works](managed/guides/MEMORY.md))
 - 🎭 **Real personality** — opinions, tone, boundaries (not a corporate chatbot)
 - 👥 **Multi-agent squad** — content writer, dev ops, researcher that coordinate autonomously
 - 🔒 **Safety policies** — auto-approve rules, daily caps, hard stops for dangerous actions
@@ -95,6 +95,7 @@ managed/                    ← We maintain these (safe to update)
 │   └── verify-agent/       — Quality-gate / verification agent
 ├── guides/
 │   ├── AI_PLAYBOOK.md      — Shipping per-repo AI playbooks and smoke scripts
+│   ├── MEMORY.md           — Memory system shape: types, what not to store, consolidation
 │   ├── MESH.md             — Multi-machine setup
 │   ├── SQUAD.md            — Multi-agent team guide
 │   └── TOKEN-OPTIMIZATION.md — Stretch your subscription 3-5x
@@ -112,7 +113,7 @@ user/                       ← You own these (never overwritten)
 ├── SOUL.md                 — Your agent's personality
 ├── USER.md                 — About you
 ├── IDENTITY.md             — Your agent's name & vibe
-├── MEMORY.md               — Long-term curated memory
+├── MEMORY.md               — Long-term memory index (see managed/guides/MEMORY.md)
 ├── MISTAKES.md             — Learned lessons & prevention rules
 ├── agents/                 — Your agent squad (customizable)
 │   ├── content-agent/
