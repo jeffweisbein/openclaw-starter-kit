@@ -55,7 +55,7 @@ Earlier this month the direct Claude Max/Pro path into OpenClaw broke. On the cu
 
 **Recommended: Claude subscription via Claude Code CLI**
 ```bash
-openclaw onboard --auth-choice claude-cli
+openclaw onboard --auth-choice anthropic-cli
 ```
 Uses your existing Claude Max/Pro subscription. OpenClaw routes Anthropic model calls through the Claude Code CLI, keeping your subscription-included usage intact. Supports Claude Opus 4.7 and the rest of the Claude 4 family.
 
