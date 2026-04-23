@@ -2,7 +2,7 @@
 
 A battle-tested workspace template for giving your AI agent personality, memory, autonomy, and a whole squad.
 
-Compatible with **OpenClaw 2026.4.2+**.
+Compatible with **OpenClaw 2026.4.18+** (Claude Opus 4.7 supported).
 
 Built by [@jeffweisbein](https://x.com/jeffweisbein) — shared on [This Week in Startups](https://thisweekinstartups.com).
 
@@ -51,25 +51,28 @@ openclaw gateway start
 
 ## Authentication
 
-As of April 4, 2026, Anthropic no longer covers OpenClaw usage under Claude Max/Pro subscriptions. You have three paths forward:
+Earlier this month the direct Claude Max/Pro path into OpenClaw broke. On the current release it works again when routed through the **Claude Code CLI**, which is the path OpenClaw now uses by default. Three options, in recommended order:
 
-**Recommended: OpenAI-Codex OAuth**
+**Recommended: Claude subscription via Claude Code CLI**
+```bash
+openclaw onboard --auth-choice claude-cli
+```
+Uses your existing Claude Max/Pro subscription. OpenClaw routes Anthropic model calls through the Claude Code CLI, keeping your subscription-included usage intact. Supports Claude Opus 4.7 and the rest of the Claude 4 family.
+
+**Alternative: OpenAI Codex OAuth**
 ```bash
 openclaw onboard --auth-choice openai-codex
 ```
-Uses your ChatGPT Plus/Pro subscription. Works with all OpenClaw features.
+Uses your ChatGPT Plus/Pro subscription. Good if you prefer ChatGPT, or want to avoid the Claude Code CLI dependency.
 
-**Alternative: Anthropic API Key**
-Set your environment variable:
+**Alternative: Anthropic API key (pay-as-you-go)**
 ```bash
 export ANTHROPIC_API_KEY="sk-ant-..."
+openclaw onboard
 ```
-Pay-as-you-go billing. Good if you use Claude API already.
+Direct API billing. Good if you already use the Claude API for other work.
 
-**Legacy: Claude Subscription**
-Still works via separate usage bundles at claude.ai (not covered by your subscription).
-
-For details, see the [Anthropic announcement](https://www.threads.com/@boris_cherny/post/DWsAWeND5nm/).
+See `openclaw onboard --help` for the full list of supported auth paths (OpenRouter, local LM Studio / Ollama, DeepSeek, Kimi, Gemini, etc.).
 
 ## Want Someone to Set This Up For You?
 
