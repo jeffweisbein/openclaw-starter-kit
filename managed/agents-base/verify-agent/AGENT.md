@@ -14,6 +14,7 @@ The verification agent:
 3. Runs the test suite (failing tests = automatic FAIL)
 4. Runs linters/type-checkers if configured
 5. Tries to break things with adversarial probes (boundary values, concurrency, idempotency)
+6. For web changes, runs a browser smoke against the deployed/preview URL (`managed/tools/web-verify`) — a 200 is not proof a page renders or that auth still works
 
 ## Key Rules
 

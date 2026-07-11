@@ -1,0 +1,16 @@
+{
+  "name": "web-verify",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Browser-driven verify loop: drive a real browser through a flow spec, capture screenshots + console/network errors, return deterministic pass/fail. Built for the ship-loop smoke test.",
+  "bin": {
+    "web-verify": "verify.mjs"
+  },
+  "scripts": {
+    "postinstall": "playwright install chromium"
+  },
+  "dependencies": {
+    "playwright": "^1.61.0"
+  }
+}

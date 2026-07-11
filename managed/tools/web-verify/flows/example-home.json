@@ -1,0 +1,11 @@
+{
+  "name": "example-home",
+  "baseUrl": "https://example.com",
+  "viewport": { "width": 1280, "height": 800 },
+  "steps": [
+    { "goto": "/" },
+    { "expectText": "Example Domain" },
+    { "expectNoText": "Application error" },
+    { "screenshot": "home" }
+  ]
+}
