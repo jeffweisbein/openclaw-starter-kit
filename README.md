@@ -6,6 +6,18 @@ Compatible with **OpenClaw 2026.4.18+** (Claude Opus 4.7 supported).
 
 Built by [@jeffweisbein](https://x.com/jeffweisbein) — shared on [This Week in Startups](https://thisweekinstartups.com).
 
+## What's New (v2.4 — July 11, 2026)
+
+- **Browser-driven smoke tests** — `managed/tools/web-verify` is the upgrade to the curl smoke template. It drives a real Chromium browser through a JSON **flow spec** against a live or preview URL, captures screenshots + console/page/network errors, and returns a **deterministic pass/fail** (exit 0/1). Catches render failures, broken auth redirects, dead buttons, and client-side JS exceptions that a 200 status hides. Includes public + authed example flows, secret-safe credential refs, and a `--base` flag to smoke-test preview deploys before merge.
+- **Gotchas guide** — `managed/guides/GOTCHAS.md` documents the agent failure modes that cost real debugging sessions and how to avoid them: background work spawned from a turn getting reaped, remote/long builds dying mid-run, "it returned 200" ≠ "it works", verify-before-merge, and heartbeat spam.
+- **Playbook + verify-agent wired to web-verify** — `AI_PLAYBOOK.md` and the verify agent now point at the browser smoke as the layer on top of the curl check.
+
+### Upgrading from v2.3
+
+1. `rsync` or copy the latest `managed/` into your workspace — safe, no `user/` file is touched.
+2. `cd managed/tools/web-verify && npm install` (installs Playwright + Chromium).
+3. Copy `flows/example-home.json` to a real flow for each app, set `baseUrl` + a couple of `expectText` assertions, and wire it into your ship-loop's smoke step.
+
 ## What's New (v2.3 — April 22, 2026)
 
 - **Claude subscription path restored** — `openclaw onboard --auth-choice anthropic-cli` is the recommended path again, routing Anthropic model calls through the Claude Code CLI so your Max/Pro subscription keeps covering usage. Compatible with OpenClaw 2026.4.18+ and Claude Opus 4.7.
@@ -104,6 +116,7 @@ managed/                    ← We maintain these (safe to update)
 │   └── verify-agent/       — Quality-gate / verification agent
 ├── guides/
 │   ├── AI_PLAYBOOK.md      — Shipping per-repo AI playbooks and smoke scripts
+│   ├── GOTCHAS.md          — Agent failure modes (turn-reaping, remote builds, verify) and fixes
 │   ├── MEMORY.md           — Memory system shape: types, what not to store, consolidation
 │   ├── MESH.md             — Multi-machine setup
 │   ├── SQUAD.md            — Multi-agent team guide
@@ -113,6 +126,8 @@ managed/                    ← We maintain these (safe to update)
 │   ├── policies.json       — Safety policies & auto-approve rules
 │   └── reaction-matrix.json — Agent reaction triggers
 ├── scripts/                — Health checks, backups, utilities
+├── tools/
+│   └── web-verify/         — Browser-driven smoke test (real Chromium, screenshots, pass/fail)
 └── templates/
     ├── AI_PLAYBOOK-template.md — Per-repo playbook starter
     └── smoke-web.sh.template   — Public smoke script starter

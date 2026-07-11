@@ -25,6 +25,13 @@ Every web-facing repo should have a `scripts/smoke-web.sh` (or equivalent) your 
 
 See `managed/templates/smoke-web.sh.template`.
 
+A `curl` smoke like this is the cheap first line — but it only proves the server
+answered. For anything with a real UI or auth, add a **browser-level** smoke on top of
+it: `managed/tools/web-verify` drives a real Chromium through a flow spec and asserts on
+rendered content + a screenshot, catching render failures, broken auth redirects, dead
+buttons, and client-side exceptions that a 200 hides. Same slot in the ship-loop, more
+teeth.
+
 ## Rollout pattern
 
 For each repo:

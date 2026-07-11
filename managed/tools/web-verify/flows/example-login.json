@@ -1,0 +1,16 @@
+{
+  "name": "example-login",
+  "baseUrl": "https://your-app.example",
+  "auth": false,
+  "viewport": { "width": 1280, "height": 800 },
+  "steps": [
+    { "goto": "/login" },
+    { "expectSelector": "input[name=email]" },
+    { "fill": ["input[name=email]", "{{secret:example.email}}"] },
+    { "fill": ["input[name=password]", "{{secret:example.password}}"] },
+    { "click": "button[type=submit]" },
+    { "waitForUrl": "**/dashboard" },
+    { "expectNoText": "Invalid credentials" },
+    { "screenshot": "dashboard" }
+  ]
+}
