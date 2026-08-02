@@ -8,7 +8,11 @@ Only wake the model when scripts produce output.
 
 ## Checks
 
-<!-- Add your check scripts here. Only act on output. -->
+```bash
+python3 /path/to/workspace/managed/scripts/outcome-reaper.py
+```
+
+<!-- Add your own check scripts here. Only act on output. -->
 <!-- Example:
 ```bash
 /path/to/check-email.sh
@@ -16,6 +20,23 @@ Only wake the model when scripts produce output.
 /path/to/check-mentions.sh
 ```
 -->
+
+## If outcome-reaper.py outputs JOB_OUTCOME_STALE
+A job stopped producing its artifact while the scheduler still calls it healthy.
+That combination is the most expensive failure mode a workspace has, because
+nobody investigates a green board.
+
+1. Read the `breaks:` line. That is the actual user-visible consequence.
+2. If the entry carries a CAVEAT (the job doesn't write a receipt when idle),
+   confirm it's really dead before raising it, then fix the job to always write.
+   The ambiguity between "quiet" and "dead" is itself the bug.
+3. Otherwise diagnose it. Tell the user what broke and since when.
+4. The incident isn't closed until the fix is captured: either a corrected
+   budget in `ops/job-outcomes.json` or a new check that would have caught it
+   sooner.
+
+If it outputs OUTCOME_REAPER_BROKEN, the manifest itself is unreadable. Fix that
+first, since every check it covers is silently not running.
 
 ## Memory Maintenance (once per day, first heartbeat after 6pm)
 If today's date differs from "Last updated" in user/MEMORY.md:

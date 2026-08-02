@@ -1,0 +1,69 @@
+{
+  "_doc": [
+    "Outcome manifest for managed/scripts/outcome-reaper.py.",
+    "",
+    "Copy this to <workspace>/ops/job-outcomes.json and replace the examples with",
+    "your own jobs. <workspace> is $OPENCLAW_WORKSPACE, or ~/clawd.",
+    "",
+    "WHY THIS EXISTS, and why it is not a job-liveness check:",
+    "A scheduler tracks whether a job RAN. It reports green when the agent turn",
+    "completed, which it does even when the work did not happen. The failure this",
+    "catches is the expensive one: a dashboard reading all-green for weeks while a",
+    "job quietly delivers nothing, because nobody goes looking at a green board.",
+    "",
+    "So track the ARTIFACT, not the job, and check it from outside the job.",
+    "",
+    "THE RULE THAT MAKES THIS WORK: a no-op must still write a receipt. 'Nothing",
+    "to report' and 'I am broken' are otherwise the same observable, which is",
+    "silence. A job that legitimately has nothing to say must still touch its",
+    "artifact on the run that found nothing. Error paths should skip the write, so",
+    "a failed run reads as stale rather than fresh.",
+    "",
+    "FIELDS",
+    "  job        human name, matching the cron or script name where possible",
+    "  artifact   path the job must keep fresh, relative to the workspace or absolute",
+    "  maxAgeH    hours before staleness is a real problem. Be generous, and set it",
+    "             to cover the longest LEGITIMATE gap: a weekday-only job needs 72",
+    "             hours, not 30, or it false-alarms every Saturday. False alarms",
+    "             train everyone to ignore this file, which is how the blind spot",
+    "             comes back.",
+    "  noOpWritesReceipt  does the job touch the artifact even when idle? Set it",
+    "             honestly. false means a green result from this job proves nothing.",
+    "  breaks     what is actually broken for the user when this goes stale. If you",
+    "             cannot write that sentence, the check is not worth having.",
+    "  note       optional; anything the person reading the alert at 2am needs",
+    "  disabled   optional; true skips the entry without deleting the record of it"
+  ],
+
+  "outcomes": [
+    {
+      "job": "daily-briefing",
+      "artifact": "state/daily-briefing.json",
+      "maxAgeH": 30,
+      "noOpWritesReceipt": true,
+      "breaks": "the morning briefing stopped being delivered"
+    },
+    {
+      "job": "memory-consolidation",
+      "artifact": "state/memory-consolidation.json",
+      "maxAgeH": 36,
+      "noOpWritesReceipt": true,
+      "breaks": "daily notes stop being promoted into long-term memory, so the agent quietly forgets"
+    },
+    {
+      "job": "auto-backup",
+      "artifact": "state/last-backup.json",
+      "maxAgeH": 26,
+      "noOpWritesReceipt": true,
+      "breaks": "the workspace is no longer backed up and nothing says so"
+    },
+    {
+      "job": "inbox-triage",
+      "artifact": "state/inbox-triage.json",
+      "maxAgeH": 12,
+      "noOpWritesReceipt": false,
+      "breaks": "incoming mail is not being triaged",
+      "note": "does not write on an empty inbox, so quiet and dead look identical. Fix the job, do not raise the budget."
+    }
+  ]
+}

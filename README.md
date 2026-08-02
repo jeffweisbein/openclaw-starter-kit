@@ -13,14 +13,31 @@ Built by [@jeffweisbein](https://x.com/jeffweisbein) — shared on [This Week in
 - **Two-way sync** — `managed/scripts/kit-sync.sh` pulls the latest `managed/` into an install. It shows the plan, asks before writing, keeps files you changed locally, backs up anything it replaces, and fingerprints `user/` and `layers/` before and after so it can prove it did not touch them. `managed/scripts/kit-promote.sh` sends a generic fix the other way, cutting the branch from the kit's upstream default branch.
 - **The scrub check** — `kit-promote.sh` reads the outgoing files, the commit message and the branch name for client identifiers before it writes anything: org names and terms from your layers, API keys and tokens, emails, private IPs, phone numbers, home paths, and any domain not already in the kit. A hit stops the promotion and prints file, line and matched text. It refuses `user/` and `layers/` paths outright.
 - **Sync guide** — [`managed/guides/SYNC.md`](managed/guides/SYNC.md) covers the routine, and why a private downstream copy is a plain clone rather than GitHub's Fork button.
+- **Destructive-command guard** — `managed/scripts/guard-destructive.py` is a `PreToolUse` hook that denies deletion inside your protected trees and tells the agent to use `trash` instead, and denies schema-destroying SQL against anything not provably local. Permission rules are posture, and in an autonomous workspace posture gets relaxed. This holds underneath all of it, including `bypassPermissions`, which is the only reason it is worth having. Protected and ephemeral directory lists are configuration, not constants, because your layout is not somebody else's: start from `managed/ops/guard-destructive.example.json`.
+- **External-content screener** — `managed/scripts/screen-external.py` screens fetched pages, search results and scraped text for prompt injection before the model acts on it, as a `PostToolUse` hook. No LLM call, no network, no dependency, so it is cheap enough to run on every fetch. Scoring is combination-based rather than keyword-based: a lone action verb is nothing, and the score only climbs when an action co-occurs with something addressing or overriding the agent. That is what keeps it off press releases and READMEs, which is what keeps it switched on.
+- **Hooks guide** — [`managed/guides/HOOKS.md`](managed/guides/HOOKS.md) wires both of them, and is specific about which settings scope to use and why a project-scoped hook is invisible to your scheduled jobs. Both hooks fail open on a crash and log it at their own level, so "has this been dead for months" is one `grep` away.
+- **Outcome tracking** — a scheduler tells you a job ran. It does not tell you the work happened, and a green board is where an expensive failure goes to hide for a month. `managed/scripts/outcome-reaper.py` checks that each job is still producing its artifact, from outside the job, and prints only what is stale. The rule that makes it work is that a no-op must still write a receipt, since otherwise "nothing to report" and "I am broken" are the same silence. Manifest starts at `managed/ops/job-outcomes.example.json`; wiring is already in `managed/HEARTBEAT.md`.
+- **Per-agent sandboxes** — `managed/scripts/agent-sandbox.sh` gives each agent a durable computer instead of a shared filesystem: an isolated VM with a persistent home volume, its own network, and tools that are still installed next turn. Set `SANDBOX_HOST` and the same script runs it all on a second machine over SSH. Needs Apple `container` on macOS 26. See [`managed/guides/SANDBOXES.md`](managed/guides/SANDBOXES.md).
+- **Session handoff on context reset** — a session that hits its token ceiling gets archived, and the next one greets your user fresh and re-asks what they were working on. `managed/AGENTS-base.md` now reads `memory/session-handoff.md` first if it exists, and `managed/memory-templates/session-handoff.md` is the shape to write into it.
+- **Six more gotchas** — [`managed/guides/GOTCHAS.md`](managed/guides/GOTCHAS.md) grows the green-scheduler trap, cron model pins that are not in the models allowlist (and why a working probe does not prove one), a context meter that reads 100% while nothing is compacting, context resets that look like amnesia, treating fetched content as instructions, and deletion that nothing can undo.
 
 ### Upgrading from v2.4
 
 1. `rsync` or copy the latest `managed/` into your workspace as usual. Safe, no `user/` file is touched.
 2. From then on, use the tools instead. `managed/scripts/kit-drift.sh --workspace ~/clawd` shows what your install has accumulated, and `managed/scripts/kit-sync.sh --workspace ~/clawd` takes the update and records `<workspace>/.kit-baseline` for next time. On a v2.4 workspace that has never been synced there is no baseline yet, so both tools rebuild one from the kit's history at your installed version. Nothing to set up.
 3. Optional, and only if you have edited `managed/` files or added your own: `managed/scripts/kit-layer.sh init <org-slug>`, then move those files into `layers/<org-slug>/` and run `managed/scripts/kit-layer.sh apply <org-slug>`.
+4. Install the hooks. Copy the two example configs and edit them to match your layout, then merge the `hooks` block from [`managed/guides/HOOKS.md`](managed/guides/HOOKS.md) into `~/.claude/settings.json` and restart your sessions. Hooks are read at startup, so an edit does nothing to a session that is already running.
+   ```bash
+   mkdir -p ~/clawd/ops
+   cp managed/ops/guard-destructive.example.json ~/clawd/ops/guard-destructive.json
+   cp managed/ops/job-outcomes.example.json      ~/clawd/ops/job-outcomes.json
+   python3 managed/scripts/tests/test_guard_destructive.py
+   python3 managed/scripts/tests/test_screen_external.py
+   ```
+   Both test suites build their own throwaway workspace in a temp directory, so they are safe to run against a live install. Set `OPENCLAW_WORKSPACE` if your workspace is not `~/clawd`.
+5. Fill in `ops/job-outcomes.json` with your own jobs, then add `python3 <workspace>/managed/scripts/outcome-reaper.py` to your heartbeat checks. With no manifest it exits silently, so wiring it before you have written one is fine.
 
-Nothing here is required. Existing installs keep working untouched, `layers/` is empty until you create one, and files you have already modified in `managed/` are left alone by the sync.
+Nothing here is required. Existing installs keep working untouched, `layers/` is empty until you create one, files you have already modified in `managed/` are left alone by the sync, and the hooks do nothing until you put them in `settings.json` yourself.
 
 ## What's New (v2.4 — July 11, 2026)
 
@@ -66,6 +83,7 @@ This is the exact workspace structure that powers a personal AI assistant with:
 - 🎭 **Real personality** — opinions, tone, boundaries (not a corporate chatbot)
 - 👥 **Multi-agent squad** — content writer, dev ops, researcher that coordinate autonomously
 - 🔒 **Safety policies** — auto-approve rules, daily caps, hard stops for dangerous actions
+- 🛑 **Hard denials that outrank your settings** — hooks that block unrecoverable deletes and destructive SQL even under `bypassPermissions` ([how to wire them](managed/guides/HOOKS.md))
 - ⚡ **Proactive behavior** — checks email, calendar, mentions without being asked
 - 🔄 **Agent reactions** — agents trigger each other (tweet posted → analyze engagement → draft followup)
 
@@ -132,21 +150,31 @@ managed/                    ← We maintain these (safe to update)
 │   └── verify-agent/       — Quality-gate / verification agent
 ├── guides/
 │   ├── AI_PLAYBOOK.md      — Shipping per-repo AI playbooks and smoke scripts
-│   ├── GOTCHAS.md          — Agent failure modes (turn-reaping, remote builds, verify) and fixes
+│   ├── GOTCHAS.md          — Agent failure modes (turn-reaping, green schedulers, verify) and fixes
+│   ├── HOOKS.md            — Wiring the safety hooks, and which settings scope they belong in
 │   ├── MEMORY.md           — Memory system shape: types, what not to store, consolidation
 │   ├── MESH.md             — Multi-machine setup
+│   ├── SANDBOXES.md        — A durable isolated VM per agent, local or on a second machine
 │   ├── SQUAD.md            — Multi-agent team guide
 │   ├── SYNC.md             — Drift, updates, promoting fixes back, private downstream repos
 │   └── TOKEN-OPTIMIZATION.md — Stretch your subscription 3-5x
-├── memory-templates/       — Typed memory scaffolds (user/feedback/project/reference)
+├── memory-templates/       — Typed memory scaffolds (user/feedback/project/reference/handoff)
 ├── ops/
 │   ├── policies.json       — Safety policies & auto-approve rules
-│   └── reaction-matrix.json — Agent reaction triggers
+│   ├── reaction-matrix.json — Agent reaction triggers
+│   ├── guard-destructive.example.json — Protected/ephemeral trees for the guard hook
+│   └── job-outcomes.example.json — Job → artifact → freshness budget manifest
 ├── scripts/                — Health checks, backups, utilities
+│   ├── guard-destructive.py — PreToolUse hook: hard denials that survive bypassPermissions
+│   ├── screen-external.py  — PostToolUse hook: prompt-injection screen on fetched content
+│   ├── outcome-reaper.py   — Which jobs stopped producing their artifact, scheduler be damned
+│   ├── agent-sandbox.sh    — Durable per-agent sandboxes (Apple container), local or remote
 │   ├── kit-drift.sh        — What in managed/ no longer matches the kit, and why
 │   ├── kit-sync.sh         — Pull the latest managed/ in, never touching user/ or layers/
 │   ├── kit-promote.sh      — Send a generic fix back up, scrubbed for client identifiers
-│   └── kit-layer.sh        — Create and compose an org layer
+│   ├── kit-layer.sh        — Create and compose an org layer
+│   ├── lib/                — Shared script internals (the screener's signal engine)
+│   └── tests/              — Test suites for the hooks; each builds its own temp workspace
 ├── tools/
 │   └── web-verify/         — Browser-driven smoke test (real Chromium, screenshots, pass/fail)
 └── templates/
@@ -201,13 +229,22 @@ Pre-configured specialized agents in `user/agents/`:
 
 See `managed/guides/SQUAD.md` for setup instructions.
 
+## Safety Hooks
+
+Two `PreToolUse`/`PostToolUse` hooks that hold in every security posture, including the permissive one your agents actually run in:
+
+- **`guard-destructive.py`** — denies deletion inside your protected trees and destructive SQL against anything not provably local
+- **`screen-external.py`** — screens fetched pages, search results and scraped text for prompt injection
+
+Both fail open on a crash and log it loudly. See `managed/guides/HOOKS.md` for the settings block, which scope to put it in, and how to check it is actually running.
+
 ## Token Optimization
 
 See `managed/guides/TOKEN-OPTIMIZATION.md` for how to stretch a $200/month Claude Max subscription 3-5x further.
 
 ## Multi-Machine Setup
 
-See `managed/guides/MESH.md` for delegating compute across machines (e.g., a Mac Mini "forge" for heavy coding).
+See `managed/guides/MESH.md` for delegating compute across machines (e.g., a Mac Mini for heavy coding). For isolation between agents on that machine, `managed/guides/SANDBOXES.md` gives each one a durable VM of its own.
 
 ## Contributing
 
