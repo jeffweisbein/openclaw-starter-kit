@@ -6,6 +6,22 @@ Compatible with **OpenClaw 2026.4.18+** (Claude Opus 4.7 supported).
 
 Built by [@jeffweisbein](https://x.com/jeffweisbein) — shared on [This Week in Startups](https://thisweekinstartups.com).
 
+## What's New (v2.5 — August 2, 2026)
+
+- **Org layers** — `layers/<org>/` is the third place, for everything specific to one client or company: agent definitions, skills, scripts, per-repo playbooks, policy overrides. It exists so `managed/` can stay byte-identical to the kit, which is what keeps updates silent instead of hand-merged. `managed/scripts/kit-layer.sh` creates a layer and composes it over `managed/` at the workspace root. It refuses to write inside `managed/` and will not overwrite a `user/` file. See [`layers/README.md`](layers/README.md).
+- **Drift checker** — `managed/scripts/kit-drift.sh` reports which `managed/` files no longer match the kit and why: clean, locally modified, behind the kit, conflict, new upstream, or added here. It answers the first question on every support call in about a second, and exits 1 on drift so it works as a cron check.
+- **Two-way sync** — `managed/scripts/kit-sync.sh` pulls the latest `managed/` into an install. It shows the plan, asks before writing, keeps files you changed locally, backs up anything it replaces, and fingerprints `user/` and `layers/` before and after so it can prove it did not touch them. `managed/scripts/kit-promote.sh` sends a generic fix the other way, cutting the branch from the kit's upstream default branch.
+- **The scrub check** — `kit-promote.sh` reads the outgoing files, the commit message and the branch name for client identifiers before it writes anything: org names and terms from your layers, API keys and tokens, emails, private IPs, phone numbers, home paths, and any domain not already in the kit. A hit stops the promotion and prints file, line and matched text. It refuses `user/` and `layers/` paths outright.
+- **Sync guide** — [`managed/guides/SYNC.md`](managed/guides/SYNC.md) covers the routine, and why a private downstream copy is a plain clone rather than GitHub's Fork button.
+
+### Upgrading from v2.4
+
+1. `rsync` or copy the latest `managed/` into your workspace as usual. Safe, no `user/` file is touched.
+2. From then on, use the tools instead. `managed/scripts/kit-drift.sh --workspace ~/clawd` shows what your install has accumulated, and `managed/scripts/kit-sync.sh --workspace ~/clawd` takes the update and records `<workspace>/.kit-baseline` for next time. On a v2.4 workspace that has never been synced there is no baseline yet, so both tools rebuild one from the kit's history at your installed version. Nothing to set up.
+3. Optional, and only if you have edited `managed/` files or added your own: `managed/scripts/kit-layer.sh init <org-slug>`, then move those files into `layers/<org-slug>/` and run `managed/scripts/kit-layer.sh apply <org-slug>`.
+
+Nothing here is required. Existing installs keep working untouched, `layers/` is empty until you create one, and files you have already modified in `managed/` are left alone by the sync.
+
 ## What's New (v2.4 — July 11, 2026)
 
 - **Browser-driven smoke tests** — `managed/tools/web-verify` is the upgrade to the curl smoke template. It drives a real Chromium browser through a JSON **flow spec** against a live or preview URL, captures screenshots + console/page/network errors, and returns a **deterministic pass/fail** (exit 0/1). Catches render failures, broken auth redirects, dead buttons, and client-side JS exceptions that a 200 status hides. Includes public + authed example flows, secret-safe credential refs, and a `--base` flag to smoke-test preview deploys before merge.
@@ -120,12 +136,17 @@ managed/                    ← We maintain these (safe to update)
 │   ├── MEMORY.md           — Memory system shape: types, what not to store, consolidation
 │   ├── MESH.md             — Multi-machine setup
 │   ├── SQUAD.md            — Multi-agent team guide
+│   ├── SYNC.md             — Drift, updates, promoting fixes back, private downstream repos
 │   └── TOKEN-OPTIMIZATION.md — Stretch your subscription 3-5x
 ├── memory-templates/       — Typed memory scaffolds (user/feedback/project/reference)
 ├── ops/
 │   ├── policies.json       — Safety policies & auto-approve rules
 │   └── reaction-matrix.json — Agent reaction triggers
 ├── scripts/                — Health checks, backups, utilities
+│   ├── kit-drift.sh        — What in managed/ no longer matches the kit, and why
+│   ├── kit-sync.sh         — Pull the latest managed/ in, never touching user/ or layers/
+│   ├── kit-promote.sh      — Send a generic fix back up, scrubbed for client identifiers
+│   └── kit-layer.sh        — Create and compose an org layer
 ├── tools/
 │   └── web-verify/         — Browser-driven smoke test (real Chromium, screenshots, pass/fail)
 └── templates/
@@ -145,16 +166,30 @@ user/                       ← You own these (never overwritten)
 │   └── research-agent/
 ├── intel/                  — Competitive intel, ideas, opportunities
 └── shared/                 — Cross-agent context
+
+layers/                     ← Your org's own material (never overwritten)
+└── <org>/                  — Config, agents, skills, scripts, playbooks, ops overrides
 ```
 
-### The Two Folders
+### The Three Folders
 
 | Folder | Who owns it | Updated by | Purpose |
 |--------|-------------|------------|---------|
 | `managed/` | OpenClaw Starter Kit | Kit updates | Infrastructure, scripts, operating rules |
 | `user/` | You | You (and your AI) | Personality, memory, custom rules |
+| `layers/<org>/` | You | You | Everything specific to your company or client |
 
-**Rule: starter kit updates only ever touch `managed/`.** Your `user/` files are sacred.
+**Rule: starter kit updates only ever touch `managed/`.** Your `user/` and `layers/` files are sacred.
+
+The counter-rule matters just as much: **keep `managed/` identical to the kit.** Identical files update silently. Edited ones have to be reconciled by hand on every release, and at three installs that is a permanent tax. If a change is generic, promote it upstream. If it is specific to one client, it belongs in a layer.
+
+```bash
+managed/scripts/kit-drift.sh --workspace ~/clawd     # what has drifted, and why
+managed/scripts/kit-sync.sh  --workspace ~/clawd     # take the latest managed/
+managed/scripts/kit-layer.sh init acme               # start a layer
+```
+
+See [`layers/README.md`](layers/README.md) for the layer contract and [`managed/guides/SYNC.md`](managed/guides/SYNC.md) for the update and promotion flow.
 
 ## Multi-Agent Squad
 

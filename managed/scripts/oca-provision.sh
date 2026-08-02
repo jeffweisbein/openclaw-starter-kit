@@ -242,12 +242,19 @@ if [[ -d "${WORKSPACE}/managed" ]]; then
     rm -rf "${STARTER_KIT_TMP}"
     git clone --depth 1 "${STARTER_KIT_REPO}" "${STARTER_KIT_TMP}" 2>/dev/null
     if [[ -d "${STARTER_KIT_TMP}/managed" ]]; then
-      # Backup current managed/ just in case
-      cp -r "${WORKSPACE}/managed" "${WORKSPACE}/managed.bak.$(date +%Y%m%d%H%M%S)" 2>/dev/null || true
-      # Replace managed/ entirely
-      rm -rf "${WORKSPACE}/managed"
-      cp -r "${STARTER_KIT_TMP}/managed" "${WORKSPACE}/managed"
-      pass "Updated managed/ files to $(cat "${WORKSPACE}/managed/VERSION" 2>/dev/null || echo 'latest')"
+      if [[ -x "${STARTER_KIT_TMP}/managed/scripts/kit-sync.sh" ]]; then
+        # v2.5+: file-level sync. Keeps locally modified files, backs up
+        # anything it replaces, and records the drift baseline.
+        "${STARTER_KIT_TMP}/managed/scripts/kit-sync.sh" \
+          --workspace "${WORKSPACE}" --kit "${STARTER_KIT_TMP}" --yes
+        pass "Updated managed/ files to $(cat "${WORKSPACE}/managed/VERSION" 2>/dev/null || echo 'latest')"
+      else
+        # Pre-v2.5 fallback: wholesale replace.
+        cp -r "${WORKSPACE}/managed" "${WORKSPACE}/managed.bak.$(date +%Y%m%d%H%M%S)" 2>/dev/null || true
+        rm -rf "${WORKSPACE}/managed"
+        cp -r "${STARTER_KIT_TMP}/managed" "${WORKSPACE}/managed"
+        pass "Updated managed/ files to $(cat "${WORKSPACE}/managed/VERSION" 2>/dev/null || echo 'latest')"
+      fi
     else
       warn "Cloned repo missing managed/ folder — skipping update"
     fi
@@ -290,6 +297,11 @@ else
     cp -r "${STARTER_KIT_TMP}/managed" "${WORKSPACE}/managed"
     cp -r "${STARTER_KIT_TMP}/user" "${WORKSPACE}/user"
     cp "${STARTER_KIT_TMP}/README.md" "${WORKSPACE}/README.md" 2>/dev/null || true
+    # Record the drift baseline so kit-drift.sh can classify from day one.
+    if [[ -x "${WORKSPACE}/managed/scripts/kit-sync.sh" ]]; then
+      "${WORKSPACE}/managed/scripts/kit-sync.sh" \
+        --workspace "${WORKSPACE}" --kit "${STARTER_KIT_TMP}" --yes >/dev/null 2>&1 || true
+    fi
     rm -rf "${STARTER_KIT_TMP}"
   fi
 fi
