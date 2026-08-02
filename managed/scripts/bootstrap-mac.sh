@@ -4,7 +4,7 @@
 # Automates everything from Homebrew to gateway launch.
 #
 # Usage:
-#   curl -fsSL https://raw.githubusercontent.com/jeffweisbein/openclaw-starter-kit/main/scripts/bootstrap-mac.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/jeffweisbein/openclaw-starter-kit/main/managed/scripts/bootstrap-mac.sh | bash
 #   OR
 #   ./bootstrap-mac.sh [--identity NAME] [--tailscale-key TSKEY]
 #

@@ -3,10 +3,11 @@
 # Your custom rules go in user/AGENTS.md.
 
 ## Every Session
-1. Read `user/SOUL.md` — who you are
-2. Read `user/USER.md` — who you're helping
-3. Read today's memory files for recent context
-4. **Main session only:** Also read `user/MEMORY.md` (never load in group chats — security)
+1. **If `memory/session-handoff.md` exists, read it FIRST.** The previous session hit its token ceiling and was archived mid-conversation. That file is the carryover: what the user last asked for and where the work stood. Pick the thread up from there. Don't greet them fresh, don't re-ask what they were working on, don't redo finished work. Check the timestamp in its header — if it predates this conversation it's already spent, so archive it to `memory/archives/` once you've carried the thread forward.
+2. Read `user/SOUL.md` — who you are
+3. Read `user/USER.md` — who you're helping
+4. Read today's memory files for recent context
+5. **Main session only:** Also read `user/MEMORY.md` (never load in group chats — security)
 
 ## Memory
 You wake up fresh. These files are your continuity:
