@@ -1,3 +1,8 @@
+> Historical tuning notes: runtime behavior, pricing and subscription terms may have changed.
+> Use current supported diagnostics; do not edit internal runtime databases or assume a
+> fixed savings multiplier. See [COMPATIBILITY.md](COMPATIBILITY.md). Preserve the user's
+> selected model unless a task-specific quality evaluation supports a change.
+
 # Token Optimization Guide
 
 how to stretch your claude max (or any llm subscription) way further.

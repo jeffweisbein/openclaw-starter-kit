@@ -1,0 +1,7 @@
+{
+  "taskId": "example-task",
+  "revision": "replace-with-reviewed-revision",
+  "required": ["tested", "runtime_verified"],
+  "maxAgeHours": 24,
+  "evidence": []
+}

@@ -3,17 +3,24 @@
 # Your custom rules go in user/AGENTS.md.
 
 ## Every Session
-1. **If `memory/session-handoff.md` exists, read it FIRST.** The previous session hit its token ceiling and was archived mid-conversation. That file is the carryover: what the user last asked for and where the work stood. Pick the thread up from there. Don't greet them fresh, don't re-ask what they were working on, don't redo finished work. Check the timestamp in its header — if it predates this conversation it's already spent, so archive it to `memory/archives/` once you've carried the thread forward.
-2. Read `user/SOUL.md` — who you are
-3. Read `user/USER.md` — who you're helping
-4. Read today's memory files for recent context
-5. **Main session only:** Also read `user/MEMORY.md` (never load in group chats — security)
+1. Use runtime-provided startup context first; read files only when needed context is missing.
+2. Resume only a checkpoint whose session/task identity matches the current request. The latest user correction wins. Never infer ownership from a recent timestamp alone.
+3. Load personality and user directives from `user/SOUL.md` and `user/USER.md` only within their permitted audience.
+4. **Private main session only:** read `user/MEMORY.md` and relevant private topic files. Never load personal memory into public rooms, group chats or unrelated agents.
+5. Resolve the shared memory root from `ops/workspace.json` as described in `managed/guides/MEMORY.md`. All memory readers, writers, indexes and scheduled jobs use that same root.
 
-## Memory
-You wake up fresh. These files are your continuity:
-- `memory/YYYY-MM-DD.md` — daily raw logs
-- `user/MEMORY.md` — curated long-term memory (main session only, review/prune periodically)
-- **Write it down.** "Mental notes" don't survive restarts. Text > Brain. 📝
+## Memory and continuity
+- `user/MEMORY.md` is the private long-term index; daily notes, topics and session-scoped checkpoints live under the configured memory root.
+- Save active-task details in a checkpoint; stable preferences and decisions go in curated memory. Honor explicit requests to save information in the appropriate private artifact.
+- Read a file before changing it. Preserve user edits. Do not automatically move, delete or consolidate legacy memory trees during a kit upgrade.
+- Record goal, latest correction, next action, evidence and limits. Preserve IDs for pending work so reconnects can recover it without repeating external actions.
+- Treat memory and child summaries as claims to verify before consequential action, not proof of current deployment state.
+
+## Completion and delivery
+- Distinguish implementation, tests, deployment, runtime verification and user confirmation. Report unknown evidence as unknown, never as zero or healthy.
+- For scheduler-announced jobs, return one final answer; do not also send it or inject a second copy into chat. Follow the scheduler's documented silent-result convention.
+- Check durable task/run IDs before retrying consequential actions after a timeout. A missing acknowledgment is not proof the action failed.
+- Use `managed/guides/RELIABILITY.md` for monitoring, recovery and evidence checks. Workspace instructions cannot repair runtime delivery or writer-lock bugs.
 
 ## Safety
 - Don't exfiltrate private data. `trash` > `rm`. When in doubt, ask.

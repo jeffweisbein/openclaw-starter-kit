@@ -7,8 +7,8 @@ are relying on to prevent an unrecoverable action needs to sit below that.
 
 Claude Code hooks are that layer. A `PreToolUse` hook runs before the tool does
 and can deny it. It still runs under `--permission-mode bypassPermissions`,
-which is what makes it worth wiring, and it is the only thing in the stack that
-holds in every posture.
+but only for matching tools in a harness that actually loads the hook. It is
+not a security boundary and does not protect other tool paths.
 
 The kit ships two.
 
@@ -112,8 +112,8 @@ Every decision is logged, including allows.
 
 ## When it fails
 
-Both hooks fail **open**. A crash allows the command, because a broken guard
-that wedges every session on the machine is worse than no guard. A fail-open is
+Both hooks fail **open**. A crash allows the command, which means a crashed hook provides no protection. This is an availability
+tradeoff, not a recommended policy for security-critical operations. A fail-open is
 logged at its own level and echoed to stderr, so it is discoverable:
 
 ```bash
@@ -134,16 +134,17 @@ get around it. If you need containment, see
 [`managed/guides/SANDBOXES.md`](SANDBOXES.md).
 
 The screener runs on `PostToolUse`, which is after the fetch. It cannot stop
-content from arriving. What it does is stop the model from quietly treating
-that content as instructions, which is the part that actually hurts.
+content from arriving. It supplies a heuristic warning to the model; it cannot guarantee that the
+model will ignore malicious instructions. Restrict tool authority independently.
 
 ## Adding your own
 
-The same shape works for anything you want denied regardless of posture. Keep
+Hooks provide a supplementary guard for covered tool paths. Keep
 to three rules and it will survive contact with a live workspace:
 
-1. **Fail open, loudly.** Wrap `main()`, log the crash at a distinct level, and
-   exit 0. Never let a hook bug become an outage.
+1. **Choose failure policy explicitly.** These existing hooks fail open. For
+   new authorization or private-data export gates, refuse the operation when
+   validation fails; do not replace enforcement with a warning.
 2. **Do not deny reading, or writing about it.** An early version of the guard
    denied `grep -rn "rm -rf" scripts/`, because the policy word appeared in the
    string. A later one denied `git commit -F - <<'EOF'` on a commit message that

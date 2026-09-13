@@ -1,0 +1,6 @@
+{
+  "reviewedPrivateRemote": false,
+  "remote": "origin",
+  "branch": "main",
+  "files": ["user/AGENTS.md", "user/SOUL.md"]
+}
