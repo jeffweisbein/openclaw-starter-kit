@@ -40,10 +40,10 @@ first, since every check it covers is silently not running.
 
 ## Memory Maintenance (once per day, first heartbeat after 6pm)
 If today's date differs from "Last updated" in user/MEMORY.md:
-1. Read recent `memory/YYYY-MM-DD.md` files (today + yesterday)
+1. In the private main session only, read recent daily notes under the configured memory root (today + yesterday)
 2. Update user/MEMORY.md with anything significant
 3. Remove outdated info
-4. If MEMORY.md > 10k chars, archive completed items to `docs/archive/memory-archive-YYYY-MM-DD.md`
+4. If MEMORY.md > 10k chars, archive completed items within the same private memory root after preserving references
 5. Update the "Last updated" date
 
 ## If All Scripts Return Nothing

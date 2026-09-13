@@ -1,73 +1,35 @@
-# The Memory System
+# Memory: one root, explicit audience
 
-Your agent's persistent, file-based memory lives in `user/MEMORY.md` plus a folder of typed topic files. `MEMORY.md` is loaded into every conversation — this guide explains the shape so the index file itself stays lean.
+`user/MEMORY.md` is a private long-term index, loaded only in the owner's private main session. It is not automatically shared with group chats or worker agents. References reachable from the index inherit that restriction.
 
-## Shape
+## Configure once
 
-- `user/MEMORY.md` — index only. One line per entry pointing to a topic file. Keep it under 200 lines; loaded on every conversation.
-- `user/memory/<topic>.md` — individual typed memory files. Each has frontmatter declaring its type.
-- `managed/memory-templates/*.md` — starter scaffolds for each memory type. Copy into `user/memory/` when you're ready to start a topic.
+Copy `managed/ops/workspace.example.json` to `ops/workspace.json`. `memoryRoot` is workspace-relative (default `memory`). `OPENCLAW_WORKSPACE` identifies the workspace; the helpers otherwise use `~/clawd`.
 
-## File format
+For a fresh install use:
 
-```markdown
----
-name: Short title
-description: One-line description used for relevance matching
-type: user | feedback | project | reference
----
+- `user/MEMORY.md`: curated private index.
+- `<memoryRoot>/YYYY-MM-DD.md`: daily notes.
+- `<memoryRoot>/topics/`: stable user, feedback, project and reference notes.
+- `<memoryRoot>/sessions/<opaque-session-id>/<task-id>.md`: compact task checkpoints.
 
-Content here.
-```
+Use opaque identifiers, not phone numbers or email addresses in paths. Copy the templates from `managed/memory-templates/`; templates do not activate automatic capture.
 
-## Memory types
+## Existing installations
 
-| Type | What to store | Examples |
-|---|---|---|
-| `user` | Who the user is, their role, preferences, expertise | "senior Go dev, new to React", "prefers terse responses" |
-| `feedback` | Corrections and confirmed approaches from the user | "don't mock the database in tests", "single bundled PR was the right call" |
-| `project` | Ongoing work, goals, decisions not derivable from code | "merge freeze after Thursday for mobile release" |
-| `reference` | Pointers to external resources and systems | "pipeline bugs tracked in Linear project INGEST" |
+Run `python3 managed/scripts/reliability.py memory-check --workspace /path/to/workspace`.
+It is read-only. If both `memory/` and `user/memory/` contain files, reconcile them manually before enabling consolidation. Choose the existing authoritative root, compare overlapping files, preserve originals, then point runtime indexing, scripts and scheduler payloads at that same root. The checker cannot inspect external runtime indexing configuration for you.
 
-For `feedback` and `project` entries, structure the body as: the rule / fact first, then `**Why:**` (reason from the user, often a past incident) and `**How to apply:**` (when it kicks in). Knowing *why* lets the agent judge edge cases instead of blindly following the rule.
+Kit sync never migrates user data. A missing root is reported, not silently created somewhere else.
 
-## What NOT to store
+## Capture and resume
 
-- Code patterns, architecture, file paths (derivable by reading the project)
-- Git history, recent changes (use `git log` / `git blame`)
-- Debugging solutions (the fix is in the code, context is in the commit message)
-- Anything already in `CLAUDE.md` / `AGENTS.md` files
-- Ephemeral task details or current conversation context
+Save stable preferences as active directives with observed date; supersede contradicted preferences rather than keeping both active. Keep decisions with their rationale. Save temporary work in a task checkpoint or requested report, not the long-term index. User requests to save work are honored.
 
-These exclusions apply even when the user explicitly asks. If they ask you to save a PR list or activity summary, ask what was *surprising* or *non-obvious* about it — that's the part worth keeping.
+Use a checkpoint only when its audience, session and task match. Preserve completed work, latest correction, next action, evidence, pending IDs and verification limits. Do not paste whole transcripts into checkpoints. Do not delete a checkpoint simply because its timestamp predates the current session.
 
-## Before recommending from memory
+Before acting on a recalled path, flag, PR or deployment, verify it still exists and applies. Successful compaction means the runtime completed compaction and a later turn recalls seeded context; a shrinking context meter alone is not proof.
 
-A memory that names a file, function, or flag is a claim about what existed *when the memory was written*. Before recommending it:
+## Consolidation
 
-- If it names a file path: check the file exists.
-- If it names a function or flag: grep for it.
-- If the user is about to act on it (not just asking about history): verify first.
-
-"The memory says X exists" is not the same as "X exists now." If current reality conflicts with a recalled memory, trust what you observe now and update or remove the stale memory.
-
-## Nightly consolidation
-
-A nightly job reviews conversations and extracts unsaved decisions, preferences, and corrections into typed memory files. Set it up with:
-
-```bash
-openclaw cron add "nightly-consolidation" \
-  --schedule "0 2 * * *" \
-  --prompt "Review today's conversations. Extract unsaved decisions, preferences, or corrections into typed memory files (user/feedback/project/reference). Update the MEMORY.md index. Clean stale memories. Check MISTAKES.md for entries missing standing rules. Write summary to memory/consolidation-$(date +%Y-%m-%d).md."
-```
-
-## Seeding from templates
-
-Copy from `managed/memory-templates/` into `user/memory/` when you want to start a topic:
-
-```bash
-cp managed/memory-templates/user-profile.md user/memory/user-profile.md
-cp managed/memory-templates/feedback-rules.md user/memory/feedback-rules.md
-```
-
-Then add a one-line pointer to the new file from `user/MEMORY.md`.
+Schedule through the installed runtime's supported automation interface; inspect its help/schema rather than copying old cron flags. Read existing schedules first and preserve cadence/delivery. Use the configured root, actual current date and explicit private-session scope. Save a receipt even when no changes are needed. If review or validation fails, withhold memory writes and report the failure; never proceed with unreviewed consolidation by default. Run a fixture-only pass before touching personal memory.

@@ -1,3 +1,8 @@
+> For v2.6, complete [COMPATIBILITY.md](COMPATIBILITY.md) first. The checklist below
+> contains historical setup examples; verify current runtime commands before executing
+> them. Keep credentials in host-owned masked entry, never command arguments. No kit
+> template implies authority to modify an existing gateway or send client messages.
+
 # Multiply Client Onboarding — Remote Access Checklist
 
 This is the only pre-install work we need from you before we set up your agent machine.

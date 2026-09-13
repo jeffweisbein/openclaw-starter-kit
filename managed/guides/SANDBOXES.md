@@ -127,3 +127,40 @@ It is not a claim about escaping a VM, and it does not protect anything you
 mount into the sandbox or any credential you pass in. Give each agent only the
 tokens it needs, scoped as narrowly as the provider allows. The sandbox limits
 what a leak reaches, not what a leak is worth.
+
+## v2.6: Docker/Colima and effective-policy verification
+
+Keep the Apple-container option above when it fits. A Docker-compatible runtime such as
+Colima is an alternative for an OpenClaw-managed dedicated builder. Use the runtime's
+supported sandbox configuration and inspect the effective policy before routing work.
+Do not build another container orchestrator on top of the kit.
+
+Recommended bounded builder profile: non-root user, read-only root filesystem, dropped
+capabilities, no-new-privileges, no network, one dedicated writable task directory,
+explicit read-only skill mounts only, and no host credentials or Docker socket mounted.
+Prebuild dependencies into the image; a no-network builder cannot download them.
+Container inspection does not expose private file contents, but never publish raw
+inspection output: environment fields can contain credentials.
+
+Run against an already-created container with its exact context and mounted task path:
+
+```bash
+python3 managed/scripts/check-isolation.py \
+  --context builder-context --container builder-container --task-path /workspace
+```
+
+If the runtime needs a read-only skills mount, explicitly add `--allow-readonly /skills`
+with its actual destination and review the source separately. Unexpected mounts fail.
+The helper checks effective policy, UID, socket absence and a temporary task-file
+write/read. It does not install Colima, change the default context, or run on the host
+when inspection fails. It does not itself test arbitrary egress or runtime routing.
+
+Finally run a real task through the dedicated agent: write/read its scratch file, attempt
+an innocuous forbidden-path read and a harmless outbound connection, and verify denials
+in actual tool receipts. Keep credentials out of the test. Only that establishes the
+agent is routed into the inspected sandbox; creating a container is not sufficient.
+
+A config value can validate without reaching the service environment. If the gateway
+needs a nondefault Docker context, use its supported persistent service wrapper/environment
+mechanism and verify it after restart. Do not overwrite the operator's default context
+or loosen the sandbox to work around a routing error. Preserve config and service backups.
