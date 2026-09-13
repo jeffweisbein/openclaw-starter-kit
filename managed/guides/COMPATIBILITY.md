@@ -50,7 +50,9 @@ Python 3.9+ is the language requirement, not a claim every OS/Python combination
    managed/scripts/kit-sync.sh --workspace /path/to/workspace --kit /path/to/kit
    ```
 
-3. Review preserved local edits. Sync changes only `managed/`, preserving `user/` and
+3. The public `user/MEMORY.md` seed is corrected for fresh installs only. Existing
+   user files are never synced; review any old "every conversation" wording in your
+   own index manually and keep it private. Review preserved local edits. Sync changes only `managed/`, preserving `user/` and
    `layers/`; new opt-in settings are copied manually into `ops/`. Do not use blanket
    `rsync` over locally customized managed files.
 4. **Backup behavior changes intentionally:** scheduled calls to `auto-backup.sh` now
