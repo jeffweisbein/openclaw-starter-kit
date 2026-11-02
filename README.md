@@ -6,7 +6,20 @@ Runtime features vary by OpenClaw version and harness. See the [compatibility an
 
 Built by [@jeffweisbein](https://x.com/jeffweisbein) — shared on [This Week in Startups](https://thisweekinstartups.com).
 
-## What's New (v2.6 — September 13, 2026)
+## What's New (v2.7 — November 2, 2026)
+
+- [Operating lessons](managed/guides/OPERATING-LESSONS.md): current-task recovery,
+  correction-aware handoffs, actual installation checks and restart continuation.
+- Outcome-driven work: primary evidence, scoped fixes and before/after proof.
+- [Reasoning and cost](managed/guides/TOKEN-OPTIMIZATION.md): bounded live-work pilots,
+  explicit limits and no unsupported savings or automatic-routing claims.
+- Content feedback and attribution: distinguish drafts, publication and measured results.
+
+Guidance-only update. No runtime patch, plugin activation, schedule, model change or
+private infrastructure is shipped. Use [the upgrade guide](managed/guides/COMPATIBILITY.md)
+and preserve local edits.
+
+### Previously (v2.6 — September 13, 2026)
 
 **An agent that remembers the task, reports once, shows its evidence and has a recovery plan.**
 

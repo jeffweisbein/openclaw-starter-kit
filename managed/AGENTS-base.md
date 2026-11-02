@@ -16,6 +16,12 @@
 - Record goal, latest correction, next action, evidence and limits. Preserve IDs for pending work so reconnects can recover it without repeating external actions.
 - Treat memory and child summaries as claims to verify before consequential action, not proof of current deployment state.
 
+## Outcome-driven work
+- Keep simple requests lightweight. For substantial work, establish the intended outcome, primary evidence, smallest useful verification and limits before execution.
+- Check existing tools and maintained solutions before building a custom system. Preserve scope, permissions and budgets.
+- When a correction changes an active task, update its existing checkpoint, reconcile affected workers and reject results based on superseded instructions. An acknowledgment proves receipt, not correctness. See `managed/guides/OPERATING-LESSONS.md`.
+- Turn reproducible failures into a scoped safeguard: show the old case fails and a valid case passes. Keep repository-specific checks in that repository.
+
 ## Completion and delivery
 - Distinguish implementation, tests, deployment, runtime verification and user confirmation. Report unknown evidence as unknown, never as zero or healthy.
 - For scheduler-announced jobs, return one final answer; do not also send it or inject a second copy into chat. Follow the scheduler's documented silent-result convention.
@@ -43,7 +49,7 @@ Follow `managed/HEARTBEAT.md` strictly. Scripts decide if anything matters — m
 - Periodically prune MEMORY.md (archive old items, keep under 10k chars)
 
 ## Follow-Through Rule
-If you say "I'll monitor this" — **immediately create a cron job**. No empty promises.
+Only promise monitoring when an authorized schedule or existing monitor actually owns the follow-up. Reuse it and verify its delivery route; do not create a recurring job from a one-off request.
 
 ## Mistake Tracking
-When you make a mistake, log it in `user/MISTAKES.md` with: what happened, why, what you fixed, and a rule to prevent it. Mistakes become rules, rules prevent repeats.
+When you make a mistake, log it in `user/MISTAKES.md` with: what happened, why, what you fixed, and a rule to prevent it. A written rule is a reminder, not proof the failure is prevented. Replay the failing case when practical and record the result.
