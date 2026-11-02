@@ -2,7 +2,7 @@
 
 ## Kit versus runtime
 
-v2.6 is a workspace-template release. It does not bundle a patched OpenClaw core,
+v2.7 is a workspace-template release. It does not bundle a patched OpenClaw core,
 Codex harness or Cast build. Runtime features must be checked on the installed version;
 no blanket "2026.4.18+ supports everything" claim is made.
 
@@ -38,7 +38,7 @@ Python 3.9+ is the language requirement, not a claim every OS/Python combination
    provisioning scripts are historical conveniences, not certified against every new
    runtime. Inspect them before use; do not pipe an installer directly into a shell or
    provide secret values as command arguments. Do not run them over an existing gateway
-   to adopt v2.6; template sync is sufficient.
+   to adopt this release; template sync is sufficient.
 
 ## Upgrading from v2.5
 
@@ -85,3 +85,11 @@ cannot guarantee zero failures, prevent all prompt injection or replace access c
 Python 3.9 and 3.12. A repository administrator with workflow permission can copy it to
 `.github/workflows/test.yml`. It is a template, not installed CI. Public-repository
 standard runners are generally free; verify billing before enabling it on private repos.
+
+## Upgrading from v2.6 to v2.7
+
+Use the same drift review and `kit-sync.sh --dry-run` process above. This release changes
+managed guidance only; no new runtime dependency, config migration, hook, schedule or
+secret is required. Existing user and organization files remain untouched. Review local
+managed-file conflicts instead of overwriting them. The v2.5 backup migration warning
+still applies if skipping v2.6. See [operating lessons](OPERATING-LESSONS.md).
